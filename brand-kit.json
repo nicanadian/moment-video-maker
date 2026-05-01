@@ -1,0 +1,160 @@
+{
+  "$schema_version": "1.0",
+  "source": "Solypsizm Brand Kit v1.docx",
+  "artist": "Solypsizm",
+  "character": {
+    "style": "Anime / cel-shaded illustration. Not photorealistic. Clean linework, soft cel shading, subtle volumetric glow on neon elements.",
+    "build": "Athletic young adult male, 6'0\" proportions, slim-muscular.",
+    "skin": "Light tan / olive.",
+    "hair": "Short, tousled, slight quiff. Dark brown. No facial hair.",
+    "visor": "Horizontal LED-strip visor across eyes. Bright cyan core (#00D4FF) with soft glow halo. No frame or edges visible above/below the strip. Visor is always lit.",
+    "jacket": "Mid-grey bomber/varsity hybrid, geometric panel construction. Stand collar. Cyan and violet neon piping in angular hexagonal patterns across chest, shoulders, and sleeves. Rib-knit cuffs and hem in black.",
+    "shirt": "Plain black crew-neck t-shirt under jacket.",
+    "belt": "Plain black.",
+    "pants": "Slim-fit dark grey trousers. Single cyan + violet piping line down the outer leg seam, top to ankle.",
+    "boots": "Black lace-up combat / work boots, mid-ankle.",
+    "gloves": "None for most shots. Optional fingerless black gloves for action shots.",
+    "description_oneliner": "Anime cel-shaded young man with a glowing horizontal cyan LED visor, grey bomber jacket with cyan/violet hexagonal neon piping, black tee, dark grey slim pants with side-seam piping, black combat boots."
+  },
+  "aesthetic": {
+    "palette": {
+      "cyan": "#00D4FF",
+      "violet": "#8A2BE2",
+      "purple": "#5B2A86",
+      "black": "#0A0A12",
+      "mid_grey": "#3A3A42",
+      "white": "#FFFFFF"
+    },
+    "palette_usage": {
+      "cyan": "dominant accent — visor, jacket piping, all UI accents, lyric highlight color",
+      "violet": "secondary — piping cross-fades and atmospheric lighting",
+      "purple": "brand purple — title cards, logo, end cards, ad CTAs"
+    },
+    "color_grade": [
+      "Crushed blacks. Lift shadows toward purple/violet.",
+      "Highlight tint toward cyan.",
+      "Saturation +10. Mid-tone contrast +15.",
+      "Vignette: subtle, 15% opacity, dark purple."
+    ],
+    "lighting_cues": "Cyan and violet rim lighting. Cinematic, moody, neon-lit. Visor and piping self-illuminate."
+  },
+  "typography": {
+    "lyric_overlay": {
+      "font": "Inter SemiBold",
+      "fallback": "Helvetica Neue Bold",
+      "size_pt": "64-72",
+      "color": "#FFFFFF",
+      "shadow": "6px black drop shadow at 80% opacity",
+      "alignment": "center",
+      "placement": "bottom 22% of frame (TikTok safe zone)"
+    },
+    "title_card": {
+      "font": "Inter SemiBold",
+      "title_pt": 72,
+      "artist_pt": 56,
+      "date_pt": 48,
+      "primary_color": "#FFFFFF",
+      "alt_color_for_light_bg": "#5B2A86"
+    },
+    "end_card": {
+      "font": "Inter Bold",
+      "cta_pt": 80,
+      "cta_color": "#00D4FF",
+      "subline_pt": 36,
+      "subline_color": "#FFFFFF"
+    },
+    "hashtags": {
+      "font": "Inter Regular",
+      "size_pt": 32,
+      "color": "#FFFFFF",
+      "opacity": 0.7
+    }
+  },
+  "video_specs": {
+    "aspect_ratio": "9:16",
+    "resolution": "1080x1920",
+    "fps": 24,
+    "codec": "H.264",
+    "container": "mp4",
+    "audio_codec": "AAC",
+    "bitrate_mbps": "8-12",
+    "audio_lufs": -14,
+    "promo_length_seconds": "20-48",
+    "hook_window_seconds": 1.5,
+    "watermarks": "ZERO third-party watermarks (Veo, Sora, etc.)"
+  },
+  "negative_prompt_items": [
+    "no slow motion",
+    "no morphing",
+    "no distorted face",
+    "no text",
+    "no watermark",
+    "no logos",
+    "no Veo watermark",
+    "no Sora watermark",
+    "no UI overlay"
+  ],
+  "always_include_in_image_prompts": [
+    "vertical 1080x1920 anime-style cel-shaded illustration",
+    "preserve character design exactly per the locked spec",
+    "cinematic, moody, neon-lit",
+    "crushed blacks, cyan and violet rim lighting",
+    "no text in the image",
+    "no logos or watermarks"
+  ],
+  "always_include_in_veo_prompts": [
+    "cinematic anime",
+    "24fps",
+    "no text overlay",
+    "no UI"
+  ],
+  "song_themes": {
+    "haze-over-the-horizon": {
+      "title": "Haze over the Horizon",
+      "mood": "Reflective, cinematic, hopeful-melancholy.",
+      "environment": "Empty asphalt road / highway, foggy purple horizon, distant rising glow, scattered stars above. Pre-dawn.",
+      "camera": "Wide, slow, contemplative. Push-ins. Few or no cuts within a clip.",
+      "character_action": "Standing or walking forward. Back to camera most shots. Singular figure on the road.",
+      "color_accent": "Purple-to-pink horizon, cyan visor, violet ground fog.",
+      "pacing": "Slow. 4-6 second average shot length.",
+      "reference_video": "Haze over the Horizon Promo Video.mp4"
+    },
+    "scatter-brained": {
+      "title": "Scatter Brained",
+      "mood": "Anxious, fragmented, urban.",
+      "environment": "Rainy nighttime cyberpunk city street. Wet pavement reflections. Neon shop signs. Pedestrians visible but blurred.",
+      "camera": "Tracking behind character. Dutch angles okay. Mild handheld feel acceptable.",
+      "character_action": "Walking forward, lights blurring past. Occasional digital glitch dissolves on the figure.",
+      "color_accent": "Magenta and red neon signage, cyan visor, blue puddle reflections.",
+      "pacing": "Faster. 2-3 second average shot length. Glitch cuts every ~4s.",
+      "reference_video": "Scatter Brained Lyric Video Promo Vertical.mp4"
+    },
+    "eat-the-rich": {
+      "title": "Eat the Rich",
+      "mood": "Defiant, satirical, retro-arcade.",
+      "environment": "Synthwave grid plane, neon wireframe geometry, score/combo HUD elements, retro arcade visuals.",
+      "camera": "First-person racer / arcade game POV mixed with character reveal shots.",
+      "character_action": "Character appears as the 'pilot' / 'player'. Action-oriented poses.",
+      "color_accent": "Hot pink, cyan, orange — full synthwave palette.",
+      "pacing": "Punchy. 1.5-2 second average shot length.",
+      "reference_video": "Eat the Rich Promo - Vertical Tiktok.mp4"
+    }
+  },
+  "title_card": {
+    "duration_seconds": "1.5-2.5",
+    "background": "atmospheric environment darkened to ~40%",
+    "layout_top_to_bottom": [
+      "[Song Title] — 72pt Inter SemiBold, white",
+      "Solypsizm — 56pt Inter SemiBold, white",
+      "Release [Date] — 48pt Inter SemiBold, white at 90% opacity"
+    ],
+    "animation": "fade in over 12 frames, hold 1.5s, fade out as first vocal line begins"
+  },
+  "end_card": {
+    "duration_seconds": "2-3",
+    "background": "hero shot of avatar centered, fade to brand purple (#5B2A86)",
+    "primary_cta": "STREAM NOW",
+    "primary_cta_style": "80pt Inter Bold, cyan (#00D4FF), centered",
+    "handle": "@nicanadian"
+  }
+}

@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "solypsizm-moment-studio"
+version = "0.1.0"
+description = "CLI for organizing Solypsizm short-form moment videos: concepts, scenes, prompts, frames, clips, edits."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Nic" }]
+dependencies = [
+    "click>=8.1",
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+audio = [
+    "librosa>=0.10",
+    "pydub>=0.25",
+]
+api = [
+    "openai>=1.30",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+solypsizm = "solypsizm_moment_studio.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/solypsizm_moment_studio"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
