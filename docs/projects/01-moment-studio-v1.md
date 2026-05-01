@@ -1,10 +1,14 @@
 # Moment Studio v1
 
-**Status:** in-progress
+**Status:** in-progress (Phase A landed, B/C/D pending)
 **Owner:** Nic
 **Started:** 2026-05-01
 **Shipped:** —
 **Source PRD:** `ref-docs/Solypsizm Moment Studio - PRD.md`
+
+## Progress log
+
+- **2026-05-01** — Phase A landed end-to-end: `bootstrap-brand-kit`, `new`, `status`, `open`, `brainstorm`, `import-concepts`, `list-concepts`, `pick-concept`, `rate-concept`, `scenes`, `import-scenes`, `list-scenes`, `prompts <scene-id>`. Pydantic models for Project / Concept / Scene / BrandKit. Atomic JSON writes + `.state/log.jsonl` operation log. Tolerant ChatGPT response parser (11 unit tests passing). Manual end-to-end smoke test green: brand-kit install → new project → concept brainstorm → scene breakdown → scene-NN-prompts.md emitted with full character spec auto-injected. Phase B/C/D commands still raise "not implemented yet".
 
 ## Goal
 
