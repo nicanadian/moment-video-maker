@@ -19,6 +19,7 @@ class Frame(BaseModel):
     file: str
     imported_at: str
     selected: bool = False
+    hash: str = ""
 
 
 class ClipTake(BaseModel):
@@ -29,6 +30,7 @@ class ClipTake(BaseModel):
     rating: int | None = None
     notes: str = ""
     selected: bool = False
+    hash: str = ""
 
 
 class Scene(BaseModel):

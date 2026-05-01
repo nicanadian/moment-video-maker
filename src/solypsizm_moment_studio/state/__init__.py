@@ -1,5 +1,6 @@
 from solypsizm_moment_studio.state.io import (
     append_log,
+    file_hash,
     list_concepts,
     list_scenes,
     load_brand_kit,
@@ -7,10 +8,13 @@ from solypsizm_moment_studio.state.io import (
     load_json,
     load_project,
     load_scene,
+    load_song_analysis,
     save_concept,
     save_json_atomic,
     save_project,
     save_scene,
+    save_song_analysis,
+    song_analysis_path,
 )
 from solypsizm_moment_studio.state.paths import (
     brand_kit_path,
@@ -23,6 +27,7 @@ from solypsizm_moment_studio.state.paths import (
 __all__ = [
     "append_log",
     "brand_kit_path",
+    "file_hash",
     "find_project_root",
     "list_concepts",
     "list_scenes",
@@ -31,11 +36,14 @@ __all__ = [
     "load_json",
     "load_project",
     "load_scene",
+    "load_song_analysis",
     "project_dir",
     "require_project_root",
     "save_concept",
     "save_json_atomic",
     "save_project",
     "save_scene",
+    "save_song_analysis",
     "solypsizm_home",
+    "song_analysis_path",
 ]

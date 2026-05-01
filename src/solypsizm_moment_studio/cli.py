@@ -1,8 +1,11 @@
 import click
 
 from solypsizm_moment_studio import __version__
+from solypsizm_moment_studio.commands import audio as cmd_audio
 from solypsizm_moment_studio.commands import brand_kit as cmd_brand_kit
 from solypsizm_moment_studio.commands import concepts as cmd_concepts
+from solypsizm_moment_studio.commands import diagnostic as cmd_diagnostic
+from solypsizm_moment_studio.commands import media as cmd_media
 from solypsizm_moment_studio.commands import project as cmd_project
 from solypsizm_moment_studio.commands import scenes as cmd_scenes
 
@@ -106,60 +109,76 @@ def prompts_cmd(scene_id: str, copy: bool) -> None:
     cmd_scenes.run_prompts(scene_id, copy)
 
 
-# --- Phase B/C/D placeholders (still stubbed) -------------------------------
+# --- Frames and clips -------------------------------------------------------
 
-def _not_yet(phase: str) -> None:
-    raise click.ClickException(f"not implemented yet — Phase {phase}")
-
-
-@main.command("import-frame")
+@main.command("import-frame", help="Import a frame PNG into a scene.")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
 @click.option("--scene", "scene_id", required=True)
 @click.option("--type", "frame_type", type=click.Choice(["start", "end"]), required=True)
-def import_frame_cmd(file, scene_id, frame_type):
-    _not_yet("B")
+def import_frame_cmd(file: str, scene_id: str, frame_type: str) -> None:
+    cmd_media.run_import_frame(file, scene_id, frame_type)
 
 
-@main.command("select-frame")
+@main.command("select-frame", help="Mark one frame as the selected start/end for a scene.")
 @click.option("--scene", "scene_id", required=True)
 @click.option("--type", "frame_type", type=click.Choice(["start", "end"]), required=True)
 @click.argument("filename")
-def select_frame_cmd(scene_id, frame_type, filename):
-    _not_yet("B")
+def select_frame_cmd(scene_id: str, frame_type: str, filename: str) -> None:
+    cmd_media.run_select_frame(scene_id, frame_type, filename)
 
 
-@main.command("import-clip")
+@main.command("import-clip", help="Import a Veo output clip into a scene.")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
 @click.option("--scene", "scene_id", required=True)
 @click.option("--rating", type=click.IntRange(1, 5))
 @click.option("--notes", default="")
-def import_clip_cmd(file, scene_id, rating, notes):
-    _not_yet("B")
+def import_clip_cmd(file: str, scene_id: str, rating: int | None, notes: str) -> None:
+    cmd_media.run_import_clip(file, scene_id, rating, notes)
 
 
-@main.command("select-clip")
+@main.command("select-clip", help="Mark one clip as the chosen take for a scene.")
 @click.option("--scene", "scene_id", required=True)
 @click.argument("filename")
-def select_clip_cmd(scene_id, filename):
-    _not_yet("B")
+def select_clip_cmd(scene_id: str, filename: str) -> None:
+    cmd_media.run_select_clip(scene_id, filename)
 
 
-@main.command("review-clips")
+@main.command("review-clips", help="Open a scene's clips folder + show ratings table.")
 @click.argument("scene_id")
-def review_clips_cmd(scene_id):
-    _not_yet("B")
+def review_clips_cmd(scene_id: str) -> None:
+    cmd_media.run_review_clips(scene_id)
 
 
-@main.command("analyze")
-@click.option("--force", is_flag=True)
-@click.option("--lyrics-aware", is_flag=True)
-def analyze_cmd(force, lyrics_aware):
-    _not_yet("B")
+# --- Song analysis ----------------------------------------------------------
+
+@main.command("analyze", help="Run librosa song analysis → audio/song-analysis.json.")
+@click.option("--force", is_flag=True, help="Overwrite an existing analysis (loses manual edits).")
+@click.option("--lyrics-aware", is_flag=True, help="(Phase D) align lyrics to sections.")
+def analyze_cmd(force: bool, lyrics_aware: bool) -> None:
+    cmd_audio.run_analyze(force, lyrics_aware)
 
 
-@main.command("sections")
-def sections_cmd():
-    _not_yet("B")
+@main.command("sections", help="Print the detected sections table.")
+def sections_cmd() -> None:
+    cmd_audio.run_sections()
+
+
+# --- Diagnostics ------------------------------------------------------------
+
+@main.command("doctor", help="Validate project structure, file references, and brand kit.")
+def doctor_cmd() -> None:
+    cmd_diagnostic.run_doctor()
+
+
+@main.command("log", help="Print the project's operation log.")
+def log_cmd() -> None:
+    cmd_diagnostic.run_log()
+
+
+# --- Phase C placeholders ---------------------------------------------------
+
+def _not_yet(phase: str) -> None:
+    raise click.ClickException(f"not implemented yet — Phase {phase}")
 
 
 @main.command("suggest-moments")
@@ -190,16 +209,6 @@ def render_all_cmd():
 @click.argument("clip")
 def trace_cmd(clip):
     _not_yet("C")
-
-
-@main.command("doctor")
-def doctor_cmd():
-    _not_yet("B")
-
-
-@main.command("log")
-def log_cmd():
-    _not_yet("B")
 
 
 if __name__ == "__main__":

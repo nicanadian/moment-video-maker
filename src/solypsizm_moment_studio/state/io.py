@@ -1,10 +1,20 @@
+import hashlib
 import json
 import os
 from pathlib import Path
 from typing import Any
 
-from solypsizm_moment_studio.models import BrandKit, Concept, Project, Scene
+from solypsizm_moment_studio.models import BrandKit, Concept, Project, Scene, SongAnalysis
 from solypsizm_moment_studio.utils import now_iso
+
+
+def file_hash(path: Path) -> str:
+    """SHA-256 of a file's contents, used for import-idempotency tracking."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def load_json(path: Path) -> Any:
@@ -97,6 +107,18 @@ def list_scenes(root: Path, concept_id: str | None = None) -> list[Scene]:
         except Exception:
             continue
     return out
+
+
+def song_analysis_path(root: Path) -> Path:
+    return root / "audio" / "song-analysis.json"
+
+
+def load_song_analysis(root: Path) -> SongAnalysis:
+    return SongAnalysis.model_validate(load_json(song_analysis_path(root)))
+
+
+def save_song_analysis(root: Path, analysis: SongAnalysis) -> None:
+    save_json_atomic(song_analysis_path(root), analysis.model_dump())
 
 
 def append_log(root: Path, event_type: str, **fields: Any) -> None:

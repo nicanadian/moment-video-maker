@@ -12,6 +12,7 @@ from solypsizm_moment_studio.models.scene import (
     FramePrompts,
     Scene,
 )
+from solypsizm_moment_studio.models.song_analysis import Section, SongAnalysis
 
 __all__ = [
     "Aesthetic",
@@ -23,5 +24,7 @@ __all__ = [
     "FramePrompts",
     "Project",
     "Scene",
+    "Section",
+    "SongAnalysis",
     "SongTheme",
 ]

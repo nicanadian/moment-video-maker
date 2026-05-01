@@ -1,6 +1,6 @@
 # Moment Studio v1
 
-**Status:** in-progress (Phase A landed, B/C/D pending)
+**Status:** in-progress (Phases A + B landed, C/D pending)
 **Owner:** Nic
 **Started:** 2026-05-01
 **Shipped:** —
@@ -8,7 +8,8 @@
 
 ## Progress log
 
-- **2026-05-01** — Phase A landed end-to-end: `bootstrap-brand-kit`, `new`, `status`, `open`, `brainstorm`, `import-concepts`, `list-concepts`, `pick-concept`, `rate-concept`, `scenes`, `import-scenes`, `list-scenes`, `prompts <scene-id>`. Pydantic models for Project / Concept / Scene / BrandKit. Atomic JSON writes + `.state/log.jsonl` operation log. Tolerant ChatGPT response parser (11 unit tests passing). Manual end-to-end smoke test green: brand-kit install → new project → concept brainstorm → scene breakdown → scene-NN-prompts.md emitted with full character spec auto-injected. Phase B/C/D commands still raise "not implemented yet".
+- **2026-05-01** — Phase A landed end-to-end: `bootstrap-brand-kit`, `new`, `status`, `open`, `brainstorm`, `import-concepts`, `list-concepts`, `pick-concept`, `rate-concept`, `scenes`, `import-scenes`, `list-scenes`, `prompts <scene-id>`. Pydantic models for Project / Concept / Scene / BrandKit. Atomic JSON writes + `.state/log.jsonl` operation log. Tolerant ChatGPT response parser (11 unit tests passing). Manual end-to-end smoke test green: brand-kit install → new project → concept brainstorm → scene breakdown → scene-NN-prompts.md emitted with full character spec auto-injected.
+- **2026-05-01** — Phase B landed end-to-end: `import-frame`, `select-frame`, `import-clip`, `select-clip`, `review-clips`, `analyze`, `sections`, `doctor`, `log`. Frame/clip imports move (not copy), auto-rename to `start-vN.png`/`take-NN.mp4`, hash for SHA-256-based duplicate detection across the project. `analyze` runs a librosa pipeline (load → beat track → agglomerative segmentation on chroma+MFCC → per-section RMS energy → 3-bucket label heuristic), refuses to overwrite without `--force`, lazy-imports librosa so non-audio commands don't pay its cost. `doctor` validates project schema, file references, and brand kit resolution. 5 new unit tests for the labeler bring the suite to 16 green. End-to-end smoke against synthesized 60s audio: 4 sections detected (intro/verse/chorus/outro), tempo 117 BPM; frame and clip imports work with duplicate detection; `select-clip` flips scene status to `complete`. Phase C (`suggest-moments`, `review-moment`, `render-*`, `trace`) still stubbed.
 
 ## Goal
 
