@@ -12,8 +12,10 @@ from solypsizm_moment_studio.state import (
     append_log,
     brand_kit_path,
     list_concepts,
+    list_moments,
     list_scenes,
     load_project,
+    load_song_analysis,
     project_dir,
     require_project_root,
     save_project,
@@ -80,10 +82,15 @@ def run_status(slug: str | None) -> None:
     project = load_project(root)
     concepts = list_concepts(root)
     scenes = list_scenes(root)
+    moments = list_moments(root)
 
     in_progress_concepts = [c for c in concepts if c.status == "in_progress"]
     scenes_with_clips = [s for s in scenes if s.clip_takes]
     scenes_complete = [s for s in scenes if s.status == "complete"]
+
+    by_status: dict[str, int] = {}
+    for m in moments:
+        by_status[m.status] = by_status.get(m.status, 0) + 1
 
     click.echo(f"Project: {project.song_slug}")
     click.echo(f"Title: {project.song_title}")
@@ -97,8 +104,38 @@ def run_status(slug: str | None) -> None:
         f"Scenes: {len(scenes)} created "
         f"({len(scenes_with_clips)} with clips, {len(scenes_complete)} complete)"
     )
-    click.echo(f"Moments target: {project.target_moment_count}")
-    click.echo(f"Moments completed: {project.moments_completed}")
+
+    if moments:
+        parts = ", ".join(f"{n} {s}" for s, n in sorted(by_status.items()))
+        click.echo(
+            f"Moments: {len(moments)} of target {project.target_moment_count} ({parts})"
+        )
+    else:
+        click.echo(f"Moments: 0 of target {project.target_moment_count}")
+
+    # Coverage by song section (PRD §F9). Quiet if there's no analysis yet.
+    try:
+        analysis = load_song_analysis(root)
+    except FileNotFoundError:
+        return
+
+    use_count: dict[str, int] = {}
+    for m in moments:
+        use_count[m.source_song_section.name] = (
+            use_count.get(m.source_song_section.name, 0) + 1
+        )
+    if analysis.sections:
+        click.echo("")
+        click.echo("Section coverage:")
+        gaps: list[str] = []
+        for s in analysis.sections:
+            n = use_count.get(s.name, 0)
+            marker = "✓" if n > 0 else "·"
+            click.echo(f"  {marker} {s.name:<14} {n} moment(s)")
+            if n == 0:
+                gaps.append(s.name)
+        if gaps:
+            click.echo(f"GAPS: {', '.join(gaps)}")
 
 
 def run_open(slug: str) -> None:

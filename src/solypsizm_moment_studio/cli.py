@@ -6,6 +6,7 @@ from solypsizm_moment_studio.commands import brand_kit as cmd_brand_kit
 from solypsizm_moment_studio.commands import concepts as cmd_concepts
 from solypsizm_moment_studio.commands import diagnostic as cmd_diagnostic
 from solypsizm_moment_studio.commands import media as cmd_media
+from solypsizm_moment_studio.commands import moments as cmd_moments
 from solypsizm_moment_studio.commands import project as cmd_project
 from solypsizm_moment_studio.commands import scenes as cmd_scenes
 
@@ -175,40 +176,43 @@ def log_cmd() -> None:
     cmd_diagnostic.run_log()
 
 
-# --- Phase C placeholders ---------------------------------------------------
+# --- Moments ----------------------------------------------------------------
 
-def _not_yet(phase: str) -> None:
-    raise click.ClickException(f"not implemented yet — Phase {phase}")
-
-
-@main.command("suggest-moments")
+@main.command("suggest-moments", help="Generate moment edit specs from clips + sections.")
 @click.option("--count", default=9, show_default=True)
-@click.option("--strategy", type=click.Choice(["tension_release", "section_focus"]))
-def suggest_moments_cmd(count, strategy):
-    _not_yet("C")
+@click.option(
+    "--strategy",
+    type=click.Choice(["tension_release", "section_focus"]),
+    default="section_focus",
+    show_default=True,
+)
+def suggest_moments_cmd(count: int, strategy: str) -> None:
+    cmd_moments.run_suggest_moments(count, strategy)
 
 
-@main.command("review-moment")
+@main.command("review-moment", help="Review a moment, hear its audio range, approve or reject.")
 @click.argument("moment_id")
-def review_moment_cmd(moment_id):
-    _not_yet("C")
+@click.option("--approve", is_flag=True, help="Skip the prompt and approve.")
+@click.option("--reject", is_flag=True, help="Skip the prompt and reject.")
+def review_moment_cmd(moment_id: str, approve: bool, reject: bool) -> None:
+    cmd_moments.run_review_moment(moment_id, approve, reject)
 
 
-@main.command("render-moment")
+@main.command("render-moment", help="(Pending Variant Builder) hand off an approved moment to render.")
 @click.argument("moment_id")
-def render_moment_cmd(moment_id):
-    _not_yet("C")
+def render_moment_cmd(moment_id: str) -> None:
+    cmd_moments.run_render_moment(moment_id)
 
 
-@main.command("render-all")
-def render_all_cmd():
-    _not_yet("C")
+@main.command("render-all", help="(Pending Variant Builder) render every approved moment.")
+def render_all_cmd() -> None:
+    cmd_moments.run_render_all()
 
 
-@main.command("trace")
+@main.command("trace", help="Find every moment that uses a given clip.")
 @click.argument("clip")
-def trace_cmd(clip):
-    _not_yet("C")
+def trace_cmd(clip: str) -> None:
+    cmd_moments.run_trace(clip)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,16 @@ import os
 from pathlib import Path
 from typing import Any
 
-from solypsizm_moment_studio.models import BrandKit, Concept, Project, Scene, SongAnalysis
+from solypsizm_moment_studio.models import (
+    BrandKit,
+    Concept,
+    EditConfig,
+    Moment,
+    Project,
+    Scene,
+    SongAnalysis,
+)
+from solypsizm_moment_studio.state.paths import edit_config_path
 from solypsizm_moment_studio.utils import now_iso
 
 
@@ -119,6 +128,40 @@ def load_song_analysis(root: Path) -> SongAnalysis:
 
 def save_song_analysis(root: Path, analysis: SongAnalysis) -> None:
     save_json_atomic(song_analysis_path(root), analysis.model_dump())
+
+
+def _moment_path(root: Path, moment_id: str) -> Path:
+    return root / "moments" / f"{moment_id}.json"
+
+
+def load_moment(root: Path, moment_id: str) -> Moment:
+    return Moment.model_validate(load_json(_moment_path(root, moment_id)))
+
+
+def save_moment(root: Path, moment: Moment) -> None:
+    moment.updated_at = now_iso()
+    save_json_atomic(_moment_path(root, moment.id), moment.model_dump())
+
+
+def list_moments(root: Path) -> list[Moment]:
+    folder = root / "moments"
+    if not folder.is_dir():
+        return []
+    out: list[Moment] = []
+    for path in sorted(folder.glob("moment-*.json")):
+        try:
+            out.append(Moment.model_validate(load_json(path)))
+        except Exception:
+            continue
+    return out
+
+
+def load_edit_config() -> EditConfig:
+    """Load ~/solypsizm/edit-config.json, or return default config if absent."""
+    path = edit_config_path()
+    if path.is_file():
+        return EditConfig.model_validate(load_json(path))
+    return EditConfig()
 
 
 def append_log(root: Path, event_type: str, **fields: Any) -> None:

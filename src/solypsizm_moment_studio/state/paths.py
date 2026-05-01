@@ -12,6 +12,10 @@ def brand_kit_path() -> Path:
     return solypsizm_home() / "brand-kit.json"
 
 
+def edit_config_path() -> Path:
+    return solypsizm_home() / "edit-config.json"
+
+
 def project_dir(slug: str) -> Path:
     return solypsizm_home() / slug
 

@@ -5,6 +5,13 @@ from solypsizm_moment_studio.models.brand_kit import (
     SongTheme,
 )
 from solypsizm_moment_studio.models.concept import Concept
+from solypsizm_moment_studio.models.edit_config import EditConfig
+from solypsizm_moment_studio.models.moment import (
+    Moment,
+    MomentStatus,
+    Segment,
+    SourceSongSection,
+)
 from solypsizm_moment_studio.models.project import Project
 from solypsizm_moment_studio.models.scene import (
     ClipTake,
@@ -20,11 +27,16 @@ __all__ = [
     "CharacterSpec",
     "ClipTake",
     "Concept",
+    "EditConfig",
     "Frame",
     "FramePrompts",
+    "Moment",
+    "MomentStatus",
     "Project",
     "Scene",
     "Section",
+    "Segment",
     "SongAnalysis",
     "SongTheme",
+    "SourceSongSection",
 ]
