@@ -1,3 +1,5 @@
+import os
+
 import click
 
 from solypsizm_moment_studio import __version__
@@ -13,8 +15,15 @@ from solypsizm_moment_studio.commands import scenes as cmd_scenes
 
 @click.group(help="Solypsizm Moment Studio — organize concepts, scenes, prompts, clips, and edits.")
 @click.version_option(__version__, prog_name="solypsizm")
-def main() -> None:
-    pass
+@click.option(
+    "--project",
+    "project_slug",
+    metavar="SLUG",
+    help="Operate on this project regardless of CWD. Equivalent to setting SOLYPSIZM_PROJECT.",
+)
+def main(project_slug: str | None) -> None:
+    if project_slug:
+        os.environ["SOLYPSIZM_PROJECT"] = project_slug
 
 
 # --- Project lifecycle ------------------------------------------------------
@@ -86,6 +95,12 @@ def rate_concept_cmd(concept_id: str, rating: int, notes: str) -> None:
 
 # --- Scenes -----------------------------------------------------------------
 
+@main.command("pick-scene", help="Set the current scene (used when --scene is omitted).")
+@click.argument("scene_id")
+def pick_scene_cmd(scene_id: str) -> None:
+    cmd_scenes.run_pick_scene(scene_id)
+
+
 @main.command("scenes", help="Emit ChatGPT scene-breakdown prompt for the current concept.")
 @click.option("--copy/--no-copy", default=True)
 def scenes_cmd(copy: bool) -> None:
@@ -103,10 +118,10 @@ def list_scenes_cmd() -> None:
     cmd_scenes.run_list_scenes()
 
 
-@main.command("prompts", help="Emit the 3 ready-to-paste prompts for a scene.")
-@click.argument("scene_id")
+@main.command("prompts", help="Emit the 3 ready-to-paste prompts for a scene (current if omitted).")
+@click.argument("scene_id", required=False)
 @click.option("--copy/--no-copy", default=False, help="Step through prompts via clipboard.")
-def prompts_cmd(scene_id: str, copy: bool) -> None:
+def prompts_cmd(scene_id: str | None, copy: bool) -> None:
     cmd_scenes.run_prompts(scene_id, copy)
 
 
@@ -114,7 +129,7 @@ def prompts_cmd(scene_id: str, copy: bool) -> None:
 
 @main.command("import-frame", help="Import a frame PNG into a scene (copies by default).")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
-@click.option("--scene", "scene_id", required=True)
+@click.option("--scene", "scene_id", help="Scene id (defaults to current scene if set).")
 @click.option("--type", "frame_type", type=click.Choice(["start", "end"]), required=True)
 @click.option("--move", is_flag=True, help="Move the source file instead of copying.")
 def import_frame_cmd(file: str, scene_id: str, frame_type: str, move: bool) -> None:
@@ -122,7 +137,7 @@ def import_frame_cmd(file: str, scene_id: str, frame_type: str, move: bool) -> N
 
 
 @main.command("select-frame", help="Mark one frame as the selected start/end for a scene.")
-@click.option("--scene", "scene_id", required=True)
+@click.option("--scene", "scene_id", help="Scene id (defaults to current scene if set).")
 @click.option("--type", "frame_type", type=click.Choice(["start", "end"]), required=True)
 @click.argument("filename")
 def select_frame_cmd(scene_id: str, frame_type: str, filename: str) -> None:
@@ -131,7 +146,7 @@ def select_frame_cmd(scene_id: str, frame_type: str, filename: str) -> None:
 
 @main.command("import-clip", help="Import a Veo output clip into a scene (copies by default).")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
-@click.option("--scene", "scene_id", required=True)
+@click.option("--scene", "scene_id", help="Scene id (defaults to current scene if set).")
 @click.option("--rating", type=click.IntRange(1, 5))
 @click.option("--notes", default="")
 @click.option("--move", is_flag=True, help="Move the source file instead of copying.")
@@ -142,7 +157,7 @@ def import_clip_cmd(
 
 
 @main.command("select-clip", help="Mark one clip as the chosen take for a scene.")
-@click.option("--scene", "scene_id", required=True)
+@click.option("--scene", "scene_id", help="Scene id (defaults to current scene if set).")
 @click.argument("filename")
 def select_clip_cmd(scene_id: str, filename: str) -> None:
     cmd_media.run_select_clip(scene_id, filename)

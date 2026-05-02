@@ -31,6 +31,40 @@ def slugify(text: str, max_words: int | None = None, fallback: str = "untitled")
     return "-".join(parts)
 
 
+def resolve_id(query: str, candidates: list[str], kind: str = "id") -> str:
+    """Resolve a user-typed ID against a list of canonical IDs.
+
+    Order: exact match → unique prefix → unique substring. Raises ValueError
+    when there's no match or multiple matches; the message lists the matches
+    so the user can pick.
+
+    Lets the artist type ``pick-concept watchtower`` instead of the full
+    ``pick-concept concept-01-abandoned-watchtower-dawn``.
+    """
+    if query in candidates:
+        return query
+    q = query.lower()
+
+    prefix = [c for c in candidates if c.lower().startswith(q)]
+    if len(prefix) == 1:
+        return prefix[0]
+    if len(prefix) > 1:
+        raise ValueError(
+            f"{query!r} is ambiguous; matches {len(prefix)} {kind}(s) by prefix: "
+            + ", ".join(prefix)
+        )
+
+    substring = [c for c in candidates if q in c.lower()]
+    if len(substring) == 1:
+        return substring[0]
+    if len(substring) > 1:
+        raise ValueError(
+            f"{query!r} is ambiguous; matches {len(substring)} {kind}(s): "
+            + ", ".join(substring)
+        )
+    raise ValueError(f"No {kind} matches {query!r}.")
+
+
 def coerce_str_list(value) -> list[str]:
     """Defensively coerce a value to a list of strings.
 

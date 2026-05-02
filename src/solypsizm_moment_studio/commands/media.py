@@ -79,10 +79,14 @@ def _stage_and_commit(src: Path, target_path: Path, move: bool) -> None:
         shutil.copy2(str(src), target_path)
 
 
-def run_import_frame(file: str, scene_id: str, frame_type: str, move: bool = False) -> None:
+def run_import_frame(
+    file: str, scene_id: str | None, frame_type: str, move: bool = False
+) -> None:
     root = require_project_root()
+    from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+    resolved = resolve_scene_id(root, scene_id)
     try:
-        scene = load_scene(root, scene_id)
+        scene = load_scene(root, resolved)
     except FileNotFoundError as e:
         raise click.ClickException(str(e)) from e
 
@@ -126,9 +130,11 @@ def run_import_frame(file: str, scene_id: str, frame_type: str, move: bool = Fal
 # ---------------------------------------------------------------------------
 
 
-def run_select_frame(scene_id: str, frame_type: str, filename: str) -> None:
+def run_select_frame(scene_id: str | None, frame_type: str, filename: str) -> None:
     root = require_project_root()
-    scene = load_scene(root, scene_id)
+    from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+    resolved = resolve_scene_id(root, scene_id)
+    scene = load_scene(root, resolved)
     frames = scene.frames.get(frame_type, [])
     match = next((f for f in frames if f.file == filename), None)
     if match is None:
@@ -146,11 +152,17 @@ def run_select_frame(scene_id: str, frame_type: str, filename: str) -> None:
 
 
 def run_import_clip(
-    file: str, scene_id: str, rating: int | None, notes: str, move: bool = False
+    file: str,
+    scene_id: str | None,
+    rating: int | None,
+    notes: str,
+    move: bool = False,
 ) -> None:
     root = require_project_root()
+    from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+    resolved = resolve_scene_id(root, scene_id)
     try:
-        scene = load_scene(root, scene_id)
+        scene = load_scene(root, resolved)
     except FileNotFoundError as e:
         raise click.ClickException(str(e)) from e
 
@@ -207,9 +219,11 @@ def run_import_clip(
 # ---------------------------------------------------------------------------
 
 
-def run_select_clip(scene_id: str, filename: str) -> None:
+def run_select_clip(scene_id: str | None, filename: str) -> None:
     root = require_project_root()
-    scene = load_scene(root, scene_id)
+    from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+    resolved = resolve_scene_id(root, scene_id)
+    scene = load_scene(root, resolved)
     match = next((c for c in scene.clip_takes if c.file == filename), None)
     if match is None:
         raise click.ClickException(f"No clip named {filename} on {scene_id}.")
@@ -227,9 +241,11 @@ def run_select_clip(scene_id: str, filename: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def run_review_clips(scene_id: str) -> None:
+def run_review_clips(scene_id: str | None) -> None:
     root = require_project_root()
-    scene = load_scene(root, scene_id)
+    from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+    resolved = resolve_scene_id(root, scene_id)
+    scene = load_scene(root, resolved)
     if not scene.clip_takes:
         click.echo(f"No clips on {scene.id} yet.")
         return

@@ -23,7 +23,7 @@ from solypsizm_moment_studio.state import (
     save_concept,
     save_project,
 )
-from solypsizm_moment_studio.utils import clipboard_copy, coerce_str_list, slugify
+from solypsizm_moment_studio.utils import clipboard_copy, coerce_str_list, resolve_id, slugify
 
 
 def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
@@ -119,28 +119,32 @@ def run_list_concepts() -> None:
 
 def run_pick_concept(concept_id: str) -> None:
     root, _bk, project = _load_context()
+    candidate_ids = [c.id for c in list_concepts(root)]
     try:
-        concept = load_concept(root, concept_id)
-    except FileNotFoundError as e:
-        raise click.ClickException(f"No concept '{concept_id}'.") from e
-    project.current_concept = concept_id
+        resolved = resolve_id(concept_id, candidate_ids, kind="concept")
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+    concept = load_concept(root, resolved)
+    project.current_concept = resolved
     if concept.status == "draft":
         concept.status = "in_progress"
         save_concept(root, concept)
     save_project(root, project)
-    append_log(root, "concept_picked", id=concept_id)
-    click.echo(f"✓ Current concept set to {concept_id} — {concept.title}")
+    append_log(root, "concept_picked", id=resolved)
+    click.echo(f"✓ Current concept set to {resolved} — {concept.title}")
 
 
 def run_rate_concept(concept_id: str, rating: int, notes: str) -> None:
     root, _bk, _project = _load_context()
+    candidate_ids = [c.id for c in list_concepts(root)]
     try:
-        concept = load_concept(root, concept_id)
-    except FileNotFoundError as e:
-        raise click.ClickException(f"No concept '{concept_id}'.") from e
+        resolved = resolve_id(concept_id, candidate_ids, kind="concept")
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+    concept = load_concept(root, resolved)
     concept.rating = rating
     if notes:
         concept.notes = notes
     save_concept(root, concept)
-    append_log(root, "concept_rated", id=concept_id, rating=rating)
-    click.echo(f"✓ Rated {concept_id}: ★{rating}")
+    append_log(root, "concept_rated", id=resolved, rating=rating)
+    click.echo(f"✓ Rated {resolved}: ★{rating}")

@@ -1,6 +1,6 @@
 # Phase D: hardening + feedback response
 
-**Status:** in-progress (D1 partial + D2 + D4.5 landed; D1.3/D1.4/D1.8/D3/D4 remaining)
+**Status:** in-progress (D1 partial + D2 + D3.1 + D4.1/2/3/4/5 + agent-found bug fixes landed; D1.3/D1.4/D1.8/D3 remainder/D4.6+ remaining)
 **Owner:** Nic
 **Started:** 2026-05-01
 **Trigger:** three-reviewer audit (video editing expert / QA engineer / system operator)
@@ -24,6 +24,21 @@
   - **D3.6** Removed hardcoded `image="../shared/end-cards/stream-now.png"` and `captions_source="captions/main.srt"` from `build_moment` — both now omitted when not configured. Will surface as brand-kit-driven config in a follow-up.
 
   Test suite is now 40/40 green (added 4 suggest tests for new audio_offset / downbeat snap / clip in/out + 7 utils.slugify tests). End-to-end smoke confirms: prompts emit reference-image instruction at top + Veo `Audio: silent video` + CRITICAL anti-patterns; cut points 25.20 / 33.00 / 38.20 against 92-BPM downbeat grid; copy-default preserves the source in `~/Downloads`; `--move` removes it; reimport after delete works.
+- **2026-05-02** — Two reviewer agents ran the full workflow E2E and surfaced flow blockers. All addressed in two commits:
+  - **moment ID sequencing**: `suggest-moments` now numbers from `len(existing) + 1`, never overwrites approved/rejected work, appends `-2`/`-3` for genuine collisions, returns a `(moments, stop_reason)` tuple so callers can explain when fewer than `--count` were produced.
+  - **`analyze` traceback**: wrapped librosa pipeline in try/except; bad audio files now produce a clean ClickException naming the underlying error type instead of a Python traceback.
+  - **parser shape validation**: every concept / scene item must now have a non-empty `'title'` field; `{"data": "not concepts"}` is rejected instead of silently fabricating `concept-01-untitled`.
+  - **`coerce_str_list` helper**: replaced naive `list(raw[...])` calls in import-concepts and import-scenes that were char-iterating ChatGPT-string-as-list (`"intro"` → `["i","n","t","r","o"]`). Now wraps a string as a one-item list and splits comma-separated strings.
+  - **title preservation**: empty / unicode / punctuation titles preserve the displayed value (`"好"`, `"!!!"`) and only the slug falls back to `untitled` for the ID.
+  - **D4.1 — "Next:" line in `status`** based on project state. Reads concepts → current concept → scenes → prompts → frames/clips → analysis → moments → review and recommends the next concrete command.
+  - **`list-moments`** for parity with `list-concepts` / `list-scenes`.
+  - **slug stopword filter** drops `the / a / of / to / and / or / in / on / at / by / for / with` so `concept-01-abandoned-watchtower-at-dawn` becomes `concept-01-abandoned-watchtower-dawn`.
+  - **D4.2 — `--project <slug>` flag** (also `SOLYPSIZM_PROJECT` env var) routes through `require_project_root`. Lets the artist `solypsizm --project haze status` from anywhere.
+  - **D4.3 — `pick-scene` + `current_scene`** field on Project. `--scene` is now optional on `import-frame`, `import-clip`, `select-frame`, `select-clip`, `review-clips`, `prompts`; defaults to the current scene if set.
+  - **D4.4 — fuzzy / prefix / substring ID matching** via `resolve_id`: `pick-concept watch` resolves to `concept-01-watchtower`. Ambiguous matches list all candidates so the user can disambiguate.
+  - **D3.1 — `Segment.in_point` / `out_point`** populated; Variant Builder now knows which slice of an 8s Veo output to use.
+
+  Test suite is now 53/53 green (added 13 new tests: sequential ID continuation, collision suffix, stop_reason, parser title-required, `coerce_str_list` shape coverage, slug stopwords).
 
 ## Why this exists
 

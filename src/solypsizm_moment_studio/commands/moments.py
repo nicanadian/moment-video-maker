@@ -19,6 +19,18 @@ from solypsizm_moment_studio.state import (
     save_moment,
 )
 from solypsizm_moment_studio.suggest import suggest_moments
+from solypsizm_moment_studio.utils import resolve_id
+
+
+def _resolve_moment(root, moment_id: str) -> "Moment":  # noqa: F821
+    """Look up a moment by ID with prefix / substring fallback."""
+    from solypsizm_moment_studio.state import load_moment
+    candidates = [m.id for m in list_moments(root)]
+    try:
+        resolved = resolve_id(moment_id, candidates, kind="moment")
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+    return load_moment(root, resolved)
 
 
 def run_suggest_moments(count: int, strategy: str | None) -> None:
@@ -115,10 +127,7 @@ def run_list_moments() -> None:
 
 def run_review_moment(moment_id: str, approve: bool, reject: bool) -> None:
     root = require_project_root()
-    try:
-        moment = load_moment(root, moment_id)
-    except FileNotFoundError as e:
-        raise click.ClickException(f"No moment {moment_id!r}.") from e
+    moment = _resolve_moment(root, moment_id)
 
     project = load_project(root)
     section = moment.source_song_section
@@ -214,10 +223,7 @@ def _try_play_audio_range(root, project, start: float, duration: float) -> None:
 
 def run_render_moment(moment_id: str) -> None:
     root = require_project_root()
-    try:
-        moment = load_moment(root, moment_id)
-    except FileNotFoundError as e:
-        raise click.ClickException(f"No moment {moment_id!r}.") from e
+    moment = _resolve_moment(root, moment_id)
 
     if moment.status != "approved":
         raise click.ClickException(

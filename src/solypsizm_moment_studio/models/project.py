@@ -13,6 +13,7 @@ class Project(BaseModel):
     brand_kit_path: str = "../brand-kit.json"
     target_moment_count: int = 9
     current_concept: str | None = None
+    current_scene: str | None = None
     concepts: list[str] = []
     moments_completed: int = 0
     created_at: str

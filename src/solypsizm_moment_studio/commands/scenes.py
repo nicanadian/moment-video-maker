@@ -25,7 +25,13 @@ from solypsizm_moment_studio.state import (
     save_scene,
 )
 from solypsizm_moment_studio.state.io import load_scene as _load_scene
-from solypsizm_moment_studio.utils import clipboard_copy, coerce_str_list, now_iso, slugify
+from solypsizm_moment_studio.utils import (
+    clipboard_copy,
+    coerce_str_list,
+    now_iso,
+    resolve_id,
+    slugify,
+)
 
 
 def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
@@ -129,10 +135,55 @@ def run_list_scenes() -> None:
             click.echo(f"  {s.id}  [{s.status}]  {s.title}")
 
 
-def run_prompts(scene_id: str, copy: bool) -> None:
-    root, bk, project = _load_context()
+def run_pick_scene(scene_id: str) -> None:
+    root, _bk, project = _load_context()
+    candidate_ids = [s.id for s in list_scenes(root)]
     try:
-        scene = _load_scene(root, scene_id)
+        resolved = resolve_id(scene_id, candidate_ids, kind="scene")
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+    project.current_scene = resolved
+    save_scene_pick(root, project)
+    append_log(root, "scene_picked", id=resolved)
+    click.echo(f"✓ Current scene set to {resolved}")
+
+
+def save_scene_pick(root, project) -> None:
+    from solypsizm_moment_studio.state import save_project
+    save_project(root, project)
+
+
+def resolve_scene_id(root, scene_id: str | None) -> str:
+    """Resolve a scene argument: explicit id (with fuzzy match) → current scene.
+
+    Used by import-frame, import-clip, prompts, select-frame, select-clip,
+    review-clips so the artist doesn't retype the full id every time.
+    """
+    candidates = [s.id for s in list_scenes(root)]
+    if scene_id:
+        try:
+            return resolve_id(scene_id, candidates, kind="scene")
+        except ValueError as e:
+            raise click.ClickException(str(e)) from e
+    project = load_project(root)
+    if project.current_scene:
+        if project.current_scene in candidates:
+            return project.current_scene
+        raise click.ClickException(
+            f"Current scene {project.current_scene!r} no longer exists. "
+            "Run `solypsizm pick-scene <id>` to set a new one."
+        )
+    raise click.ClickException(
+        "No scene specified and no current scene picked. "
+        "Pass --scene <id> or run `solypsizm pick-scene <id>` first."
+    )
+
+
+def run_prompts(scene_id: str | None, copy: bool) -> None:
+    root, bk, project = _load_context()
+    resolved = resolve_scene_id(root, scene_id)
+    try:
+        scene = _load_scene(root, resolved)
     except FileNotFoundError as e:
         raise click.ClickException(str(e)) from e
     md = scene_prompts_markdown(bk, project, scene)
