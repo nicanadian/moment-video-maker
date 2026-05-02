@@ -148,7 +148,7 @@ def run_prompts(scene_id: str, copy: bool) -> None:
 
     scene.prompts = FramePrompts(
         start_frame=start_frame_prompt(bk, project, scene),
-        end_frame=end_frame_prompt(bk, scene),
+        end_frame=end_frame_prompt(bk, project, scene),
         veo_motion=veo_motion_prompt(bk, project, scene),
     )
     if scene.status == "draft":

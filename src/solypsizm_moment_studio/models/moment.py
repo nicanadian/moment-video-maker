@@ -29,6 +29,10 @@ class Segment(BaseModel):
     footer: str | None = None
     source: str | None = None
     audio_offset: float | None = None
+    # Slice of a clip to use, in seconds from the clip file's start. Veo
+    # outputs ~8s; the editor needs to know which slice.
+    in_point: float | None = None
+    out_point: float | None = None
     image: str | None = None
 
 

@@ -292,6 +292,90 @@ def test_pick_clips_diversifies_across_scenes_first() -> None:
     assert len(set(scene_ids)) == len(scene_ids), f"got duplicates in {scene_ids}"
 
 
+def test_first_clip_audio_offset_equals_section_start() -> None:
+    """The title card overlays the music; the first clip starts exactly at section.start
+    (no +1.5s shift). This was the load-bearing audio-alignment bug.
+    """
+    moments = suggest_moments(
+        project=_project(),
+        song_analysis=_song(),
+        scenes=_diverse_scene_pool(),
+        cfg=EditConfig(),
+        count=1,
+        strategy="section_focus",
+    )
+    assert moments
+    first_clip = next(seg for seg in moments[0].segments if seg.type == "clip")
+    section = moments[0].source_song_section
+    assert first_clip.audio_offset == section.start, (
+        f"first clip starts at {first_clip.audio_offset}, expected {section.start}"
+    )
+
+
+def test_last_clip_ends_at_section_end() -> None:
+    """Sum of clip durations covers exactly the section duration — never overruns."""
+    moments = suggest_moments(
+        project=_project(),
+        song_analysis=_song(),
+        scenes=_diverse_scene_pool(),
+        cfg=EditConfig(),
+        count=1,
+        strategy="section_focus",
+    )
+    m = moments[0]
+    section = m.source_song_section
+    clips = [s for s in m.segments if s.type == "clip"]
+    last = clips[-1]
+    end_time = (last.audio_offset or 0) + (last.duration or 0)
+    assert abs(end_time - section.end) < 0.01, (
+        f"last clip ends at {end_time}, expected {section.end}"
+    )
+
+
+def test_clips_snap_to_downbeat_grid_when_provided() -> None:
+    """When the analysis has downbeats, cuts should land on them."""
+    song = SongAnalysis(
+        audio_file="audio/master.wav",
+        duration_seconds=120.0,
+        tempo_bpm=92.0,
+        sections=[Section(name="chorus 1", start=20.0, end=40.0, energy_avg=0.78)],
+        beat_grid_seconds=[],
+        # 4 downbeats inside the section: 24.0 / 28.5 / 33.0 / 37.5
+        downbeat_seconds=[20.0, 24.0, 28.5, 33.0, 37.5, 40.0],
+    )
+    moments = suggest_moments(
+        project=_project(),
+        song_analysis=song,
+        scenes=_diverse_scene_pool(),
+        cfg=EditConfig(min_clips_per_moment=3, max_clips_per_moment=3),
+        count=1,
+        strategy="section_focus",
+    )
+    m = moments[0]
+    clips = [s for s in m.segments if s.type == "clip"]
+    # First two clip ends should be downbeats (the third clamps to section.end).
+    cut_times = [(c.audio_offset or 0) + (c.duration or 0) for c in clips[:-1]]
+    for cut in cut_times:
+        assert any(abs(cut - db) < 0.01 for db in song.downbeat_seconds), (
+            f"cut at {cut} doesn't snap to any downbeat in {song.downbeat_seconds}"
+        )
+
+
+def test_clips_have_in_point_and_out_point() -> None:
+    moments = suggest_moments(
+        project=_project(),
+        song_analysis=_song(),
+        scenes=_diverse_scene_pool(),
+        cfg=EditConfig(),
+        count=1,
+        strategy="section_focus",
+    )
+    for seg in moments[0].segments:
+        if seg.type == "clip":
+            assert seg.in_point == 0.0
+            assert seg.out_point is not None and seg.out_point > 0
+
+
 def test_tension_release_leads_with_low_energy_clip_on_chorus() -> None:
     cfg = EditConfig()
     pool = [(s, s.clip_takes[0]) for s in _diverse_scene_pool()]

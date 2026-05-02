@@ -48,6 +48,22 @@ def run(source: str | None, out: str | None, force: bool) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src_path, out_path)
 
+    # Mirror sibling character-reference/ folder into the same destination so the
+    # paths in the brand kit (e.g. character.reference_image) resolve relative
+    # to the installed brand-kit.json.
+    src_refs = src_path.parent / "character-reference"
+    if src_refs.is_dir():
+        dest_refs = out_path.parent / "character-reference"
+        if dest_refs.exists() and not force:
+            click.echo(
+                f"⚠ {dest_refs} already exists; not overwriting (use --force).", err=True
+            )
+        else:
+            if dest_refs.exists():
+                shutil.rmtree(dest_refs)
+            shutil.copytree(src_refs, dest_refs)
+            click.echo(f"✓ Installed character-reference/ to {dest_refs}")
+
     home = solypsizm_home()
     click.echo(f"✓ Installed brand kit to {out_path}")
     if out_path.parent == home:

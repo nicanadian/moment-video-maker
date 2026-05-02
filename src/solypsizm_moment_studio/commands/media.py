@@ -35,16 +35,21 @@ def _clips_dir(root: Path, scene: Scene) -> Path:
 def _find_existing_hash(root: Path, hash_value: str) -> str | None:
     """Search every scene's frames + clips for a file with this hash.
 
-    Returns a human-readable location string or None.
+    Skips records whose on-disk file no longer exists — that lets the artist
+    delete a bad take and re-import the same content without hand-editing the
+    scene JSON (review-feedback, QA #critical-1).
     """
     for s in list_scenes(root):
+        scene_dir = root / "scenes" / s.concept_id
         for slot, frames in s.frames.items():
             for f in frames:
                 if f.hash and f.hash == hash_value:
-                    return f"{s.id}/{slot}/{f.file}"
+                    if (scene_dir / f"{s.id}-frames" / f.file).is_file():
+                        return f"{s.id}/{slot}/{f.file}"
         for clip in s.clip_takes:
             if clip.hash and clip.hash == hash_value:
-                return f"{s.id}/clips/{clip.file}"
+                if (scene_dir / f"{s.id}-clips" / clip.file).is_file():
+                    return f"{s.id}/clips/{clip.file}"
     return None
 
 
@@ -62,7 +67,19 @@ def _next_take_filename(scene: Scene, suffix: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def run_import_frame(file: str, scene_id: str, frame_type: str) -> None:
+def _stage_and_commit(src: Path, target_path: Path, move: bool) -> None:
+    """Place the source at target_path. Defaults to copy so a rejected
+    re-import doesn't delete the source from ~/Downloads. ``--move`` opt-in
+    matches the original PRD §F4 wording for users who want a clean Downloads.
+    """
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    if move:
+        shutil.move(str(src), target_path)
+    else:
+        shutil.copy2(str(src), target_path)
+
+
+def run_import_frame(file: str, scene_id: str, frame_type: str, move: bool = False) -> None:
     root = require_project_root()
     try:
         scene = load_scene(root, scene_id)
@@ -84,19 +101,24 @@ def run_import_frame(file: str, scene_id: str, frame_type: str) -> None:
         )
 
     target_dir = _frames_dir(root, scene)
-    target_dir.mkdir(parents=True, exist_ok=True)
     target_name = _next_frame_filename(scene, frame_type, suffix)
     target_path = target_dir / target_name
-    shutil.move(str(src), target_path)
-
-    scene.frames.setdefault(frame_type, []).append(
-        Frame(file=target_name, imported_at=now_iso(), hash=h)
-    )
-    if scene.status == "draft" or scene.status == "prompts_ready":
-        scene.status = "frames_imported"
-    save_scene(root, scene)
+    _stage_and_commit(src, target_path, move)
+    try:
+        scene.frames.setdefault(frame_type, []).append(
+            Frame(file=target_name, imported_at=now_iso(), hash=h)
+        )
+        if scene.status == "draft" or scene.status == "prompts_ready":
+            scene.status = "frames_imported"
+        save_scene(root, scene)
+    except Exception:
+        # Roll back the file landing so we don't orphan the import.
+        if target_path.is_file():
+            target_path.unlink()
+        raise
     append_log(root, "frame_imported", scene_id=scene.id, type=frame_type, file=target_name)
-    click.echo(f"✓ Imported as {target_name} → {target_path.relative_to(root)}")
+    op = "Moved" if move else "Copied"
+    click.echo(f"✓ {op} as {target_name} → {target_path.relative_to(root)}")
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +145,9 @@ def run_select_frame(scene_id: str, frame_type: str, filename: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def run_import_clip(file: str, scene_id: str, rating: int | None, notes: str) -> None:
+def run_import_clip(
+    file: str, scene_id: str, rating: int | None, notes: str, move: bool = False
+) -> None:
     root = require_project_root()
     try:
         scene = load_scene(root, scene_id)
@@ -145,23 +169,26 @@ def run_import_clip(file: str, scene_id: str, rating: int | None, notes: str) ->
         )
 
     target_dir = _clips_dir(root, scene)
-    target_dir.mkdir(parents=True, exist_ok=True)
     target_name = _next_take_filename(scene, suffix)
     target_path = target_dir / target_name
-    shutil.move(str(src), target_path)
-
-    scene.clip_takes.append(
-        ClipTake(
-            file=target_name,
-            imported_at=now_iso(),
-            rating=rating,
-            notes=notes,
-            hash=h,
+    _stage_and_commit(src, target_path, move)
+    try:
+        scene.clip_takes.append(
+            ClipTake(
+                file=target_name,
+                imported_at=now_iso(),
+                rating=rating,
+                notes=notes,
+                hash=h,
+            )
         )
-    )
-    if scene.status in {"draft", "prompts_ready", "frames_imported"}:
-        scene.status = "clips_imported"
-    save_scene(root, scene)
+        if scene.status in {"draft", "prompts_ready", "frames_imported"}:
+            scene.status = "clips_imported"
+        save_scene(root, scene)
+    except Exception:
+        if target_path.is_file():
+            target_path.unlink()
+        raise
     append_log(
         root,
         "clip_imported",
@@ -171,7 +198,8 @@ def run_import_clip(file: str, scene_id: str, rating: int | None, notes: str) ->
         notes=notes,
     )
     rating_str = f" ★{rating}" if rating else ""
-    click.echo(f"✓ Imported as {target_name}{rating_str} → {target_path.relative_to(root)}")
+    op = "Moved" if move else "Copied"
+    click.echo(f"✓ {op} as {target_name}{rating_str} → {target_path.relative_to(root)}")
 
 
 # ---------------------------------------------------------------------------

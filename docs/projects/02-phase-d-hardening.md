@@ -1,11 +1,29 @@
 # Phase D: hardening + feedback response
 
-**Status:** draft (planning)
+**Status:** in-progress (D1 partial + D2 + D4.5 landed; D1.3/D1.4/D1.8/D3/D4 remaining)
 **Owner:** Nic
 **Started:** 2026-05-01
 **Trigger:** three-reviewer audit (video editing expert / QA engineer / system operator)
 **Source PRD:** `ref-docs/Solypsizm Moment Studio - PRD.md`
 **Predecessor:** `docs/projects/01-moment-studio-v1.md` (Phases A + B + C)
+
+## Progress log
+
+- **2026-05-01** — Locked answers to the open questions (no Veo audio, character-reference embedded, `tension_release` stays as-is, `~/solypsizm/shared/` for end cards, copy by default). Landed:
+  - **D2.1** Veo prompt: explicit `Aspect`, `Duration`, `Audio: silent video — no music, no dialogue, no foley, no SFX`, negatives reformatted as a separate `Avoid:` newline-stanza.
+  - **D2.2** Extracted canonical front-view PNG from the docx into `character-reference/front.png`. Added `character.reference_image` + `reference_images` dict to brand-kit.json + BrandKit model. `start_frame_prompt` now leads with a "BEFORE PASTING: upload the reference image at <path>" instruction. `bootstrap-brand-kit` mirrors the `character-reference/` folder into `~/solypsizm/`.
+  - **D2.3** CRITICAL anti-patterns added inline to the visor and jacket descriptions: "single thin cyan strip — NOT goggles, NOT sunglasses, NOT a helmet visor"; "HEXAGONAL — NOT zigzag, NOT racing stripes, NOT diagonals". Echoed in the end-frame prompt's preserve-detail line.
+  - **D2.4** `end_frame_prompt` now takes `project` + `scene` and re-anchors palette/grade with `bk.aesthetic.lighting_cues` and `bk.song_theme(project.song_slug)`.
+  - **D1.1** `audio_offset` math fixed: title card overlays section start instead of pushing music forward; first clip starts at exactly `section.start`.
+  - **D1.2** Cuts snap to `song_analysis.downbeat_seconds` (falling back to `beat_grid_seconds`). New two-pass `_select_cut_points` picks ideal even-distribution targets first, then snaps each to the nearest grid value within a floor/ceiling window — distributes slack across all clips instead of dumping it on the last.
+  - **D1.5** `import-frame`/`import-clip` rollback: if `save_scene` fails after the file lands, the destination is unlinked.
+  - **D1.6** Hash dedup check now skips records whose on-disk file no longer exists, so deleting and re-importing the same content works.
+  - **D1.7** `slugify` returns `"untitled"` (configurable) for unicode-only / punctuation-only / empty inputs. No more empty-slug ID collisions.
+  - **D4.5** Frame/clip imports default to `--copy`; `--move` is opt-in. The success line says "Copied" or "Moved".
+  - **D3.1** Added `in_point` / `out_point` to `Segment` (start at 0.0, equal to clip duration by default — Variant Builder can override per-take).
+  - **D3.6** Removed hardcoded `image="../shared/end-cards/stream-now.png"` and `captions_source="captions/main.srt"` from `build_moment` — both now omitted when not configured. Will surface as brand-kit-driven config in a follow-up.
+
+  Test suite is now 40/40 green (added 4 suggest tests for new audio_offset / downbeat snap / clip in/out + 7 utils.slugify tests). End-to-end smoke confirms: prompts emit reference-image instruction at top + Veo `Audio: silent video` + CRITICAL anti-patterns; cut points 25.20 / 33.00 / 38.20 against 92-BPM downbeat grid; copy-default preserves the source in `~/Downloads`; `--move` removes it; reimport after delete works.
 
 ## Why this exists
 

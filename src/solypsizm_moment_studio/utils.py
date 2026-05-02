@@ -11,11 +11,14 @@ def now_iso() -> str:
 _slug_re = re.compile(r"[^a-z0-9]+")
 
 
-def slugify(text: str, max_words: int | None = None) -> str:
+def slugify(text: str, max_words: int | None = None, fallback: str = "untitled") -> str:
+    """Lowercase, ASCII-letter/digit, dash-separated. Returns `fallback` when
+    the input contains no slug-able characters (e.g. unicode-only or punctuation
+    titles), so callers never produce empty IDs."""
     s = _slug_re.sub("-", text.lower()).strip("-")
     if max_words is not None:
         s = "-".join(s.split("-")[:max_words])
-    return s
+    return s or fallback
 
 
 def clipboard_copy(text: str) -> bool:

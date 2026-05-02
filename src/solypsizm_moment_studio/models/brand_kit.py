@@ -16,6 +16,10 @@ class CharacterSpec(BaseModel):
     boots: str
     gloves: str = ""
     description_oneliner: str
+    # Path to the canonical reference PNG, relative to the brand-kit.json file.
+    reference_image: str = ""
+    # Optional dict of named pose references (front, back, walking-side, etc.).
+    reference_images: dict[str, str] = {}
 
 
 class Aesthetic(BaseModel):
@@ -40,6 +44,15 @@ class SongTheme(BaseModel):
     reference_video: str = ""
 
 
+class VeoPromptConstants(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    aspect: str = "vertical 9:16, 1080x1920"
+    duration: str = "~6 seconds, continuous take, locked framing, no cuts"
+    audio: str = "silent video — no music, no dialogue, no foley, no SFX"
+    style: list[str] = []
+
+
 class BrandKit(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
@@ -50,6 +63,7 @@ class BrandKit(BaseModel):
     negative_prompt_items: list[str] = []
     always_include_in_image_prompts: list[str] = []
     always_include_in_veo_prompts: list[str] = []
+    veo_prompt: VeoPromptConstants = VeoPromptConstants()
     song_themes: dict[str, SongTheme] = {}
 
     def negative_prompt_string(self) -> str:

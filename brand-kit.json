@@ -7,14 +7,18 @@
     "build": "Athletic young adult male, 6'0\" proportions, slim-muscular.",
     "skin": "Light tan / olive.",
     "hair": "Short, tousled, slight quiff. Dark brown. No facial hair.",
-    "visor": "Horizontal LED-strip visor across eyes. Bright cyan core (#00D4FF) with soft glow halo. No frame or edges visible above/below the strip. Visor is always lit.",
-    "jacket": "Mid-grey bomber/varsity hybrid, geometric panel construction. Stand collar. Cyan and violet neon piping in angular hexagonal patterns across chest, shoulders, and sleeves. Rib-knit cuffs and hem in black.",
+    "visor": "CRITICAL — horizontal LED-strip visor across eyes: a single thin cyan strip (#00D4FF core with soft glow halo). NOT goggles, NOT sunglasses, NOT a helmet visor, NOT a Cyclops/Geordi-style frame. No upper or lower edge visible. Visor is always lit.",
+    "jacket": "Mid-grey bomber/varsity hybrid, geometric panel construction. Stand collar. Cyan AND violet neon piping in angular HEXAGONAL patterns across chest, shoulders, and sleeves — NOT zigzag, NOT racing stripes, NOT diagonals. Rib-knit cuffs and hem in black.",
     "shirt": "Plain black crew-neck t-shirt under jacket.",
     "belt": "Plain black.",
-    "pants": "Slim-fit dark grey trousers. Single cyan + violet piping line down the outer leg seam, top to ankle.",
+    "pants": "Slim-fit dark grey trousers. Single cyan + violet piping line down the OUTER leg seam, top to ankle.",
     "boots": "Black lace-up combat / work boots, mid-ankle.",
     "gloves": "None for most shots. Optional fingerless black gloves for action shots.",
-    "description_oneliner": "Anime cel-shaded young man with a glowing horizontal cyan LED visor, grey bomber jacket with cyan/violet hexagonal neon piping, black tee, dark grey slim pants with side-seam piping, black combat boots."
+    "description_oneliner": "Anime cel-shaded young man with a glowing horizontal cyan LED visor (single strip, no frame), grey bomber jacket with cyan/violet hexagonal neon piping, black tee, dark grey slim pants with side-seam piping, black combat boots.",
+    "reference_image": "character-reference/front.png",
+    "reference_images": {
+      "front": "character-reference/front.png"
+    }
   },
   "aesthetic": {
     "palette": {
@@ -102,12 +106,17 @@
     "no text in the image",
     "no logos or watermarks"
   ],
-  "always_include_in_veo_prompts": [
-    "cinematic anime",
-    "24fps",
-    "no text overlay",
-    "no UI"
-  ],
+  "veo_prompt": {
+    "aspect": "vertical 9:16, 1080x1920",
+    "duration": "~6 seconds, continuous take, locked framing, no cuts, no zooms unless specified",
+    "audio": "silent video — no music, no dialogue, no foley, no SFX",
+    "style": [
+      "cinematic anime",
+      "24fps cel-shaded animation",
+      "subtle volumetric glow on neon elements",
+      "crushed blacks, cyan/violet rim lighting"
+    ]
+  },
   "song_themes": {
     "haze-over-the-horizon": {
       "title": "Haze over the Horizon",

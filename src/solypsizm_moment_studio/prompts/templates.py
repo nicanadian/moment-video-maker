@@ -129,10 +129,27 @@ Return ONLY the JSON array. No prose. No code fences.
 """
 
 
+def _reference_image_header(bk: BrandKit) -> str:
+    """Top-of-prompt instruction: upload the canonical reference image first.
+
+    DALL-E / GPT-image won't lock the cel-shaded character from text alone — the
+    reference upload is what holds visor / piping / palette across regenerations
+    (review-feedback, editor #2).
+    """
+    ref = bk.character.reference_image
+    if not ref:
+        return ""
+    return (
+        f">>> BEFORE PASTING: upload the reference image at `{ref}` as the seed.\n"
+        ">>> The character below MUST match that image exactly. Do not invent new pose or outfit.\n"
+    )
+
+
 def start_frame_prompt(bk: BrandKit, project: Project, scene: Scene) -> str:
     """ChatGPT image start-frame prompt per PRD §F3.
 
-    Inlines the character spec verbatim and ends with the watermark/text disclaimer.
+    Inlines the character spec verbatim, leads with the reference-upload
+    instruction, and ends with the watermark/text disclaimer.
     """
     theme = bk.song_theme(project.song_slug)
     palette_line = bk.aesthetic.lighting_cues or ""
@@ -140,14 +157,16 @@ def start_frame_prompt(bk: BrandKit, project: Project, scene: Scene) -> str:
         "vertical 1080x1920 anime-style cel-shaded illustration"
     ]
 
-    parts = [
-        "Generate a " + base_lines[0] + ".",
-        "",
-        "Character (preserve exactly per the locked spec):",
-        _character_block(bk),
-        "",
-        f"Scene: {scene.environment or scene.description}.",
-    ]
+    header = _reference_image_header(bk)
+    parts: list[str] = []
+    if header:
+        parts.append(header)
+    parts.append("Generate a " + base_lines[0] + ".")
+    parts.append("")
+    parts.append("Character (preserve exactly per the locked spec — match the uploaded reference):")
+    parts.append(_character_block(bk))
+    parts.append("")
+    parts.append(f"Scene: {scene.environment or scene.description}.")
     if theme is not None:
         parts.append(f"Song theme cues: {theme.environment} {theme.color_accent}")
     if scene.shot_type:
@@ -161,48 +180,79 @@ def start_frame_prompt(bk: BrandKit, project: Project, scene: Scene) -> str:
     return "\n".join(parts)
 
 
-def end_frame_prompt(bk: BrandKit, scene: Scene) -> str:
+def end_frame_prompt(bk: BrandKit, project: Project, scene: Scene) -> str:
     """ChatGPT image end-frame continuation prompt per PRD §F3.
 
-    Refers to the previous image and asks for *significant* motion, with a numeric guideline
-    so the seed-frame doesn't drift only a few pixels.
+    Re-anchors brand kit aesthetic + song theme so palette/grade don't drift on
+    the second generation (review-feedback, editor #7). Asks for significant
+    motion with explicit numeric guidelines so the second frame isn't a
+    near-duplicate of the first.
     """
     motion = scene.subject_motion or "character has taken at least 4 paces forward"
     camera = scene.camera_motion or "camera has dollied at least 4 meters"
-    return f"""Continue from the previous image. Same character, same environment, same lighting and color palette.
+    theme = bk.song_theme(project.song_slug)
+    palette_line = bk.aesthetic.lighting_cues or ""
 
-Change:
-- {camera}
-- {motion}
-
-Preserve every character design detail exactly per the original (visor, jacket piping, pants seam piping, boots).
-
-No text. No watermark."""
+    parts = [
+        "Continue from the previous image. Same character, same environment, "
+        "same color palette, same grade.",
+        "",
+        "Change:",
+        f"- {camera}",
+        f"- {motion}",
+        "",
+        "Preserve every character design detail exactly per the locked spec "
+        "(single horizontal cyan visor strip — NOT goggles; hexagonal jacket "
+        "piping — NOT zigzag; pants side-seam piping; combat boots).",
+    ]
+    if theme is not None:
+        parts.append(f"Hold the song theme: {theme.color_accent}; {theme.mood}")
+    if palette_line:
+        parts.append(f"Hold the mood: {palette_line}")
+    parts.append("")
+    parts.append("No text. No watermark.")
+    return "\n".join(parts)
 
 
 def veo_motion_prompt(bk: BrandKit, project: Project, scene: Scene) -> str:
     """Veo 3 motion prompt per PRD §F3.
 
-    Structured with the labeled fields Veo prefers.
+    Restructured per editor feedback (#1): explicit Aspect, Audio (silent —
+    Veo 3 dubs music by default which fights the master), Duration, and a
+    newline-delimited Avoid: stanza for negatives. Style line drawn from the
+    brand kit's veo_prompt.style.
     """
-    style_lines = bk.always_include_in_veo_prompts or ["cinematic anime", "24fps"]
-    style = ", ".join(style_lines)
-    negative = bk.negative_prompt_string()
+    veo = bk.veo_prompt
+    style = ", ".join(veo.style) if veo.style else ", ".join(bk.always_include_in_veo_prompts)
     theme = bk.song_theme(project.song_slug)
     env_extra = f" {theme.color_accent}" if theme is not None else ""
+    negatives = bk.negative_prompt_items or [
+        "no slow motion",
+        "no morphing",
+        "no distorted face",
+        "no text",
+        "no watermark",
+    ]
+    avoid_block = "\n".join(f"- {n}" for n in negatives)
+
     return f"""Subject: {bk.character.description_oneliner}
 Action: {scene.subject_motion or scene.description}
 Environment: {scene.environment}{env_extra}
 Lighting: {scene.lighting or bk.aesthetic.lighting_cues}
 Camera: {scene.camera_motion or scene.shot_type}
+Aspect: {veo.aspect}
+Duration: {veo.duration}
+Audio: {veo.audio}
 Style: {style}
-Negative: {negative}"""
+
+Avoid:
+{avoid_block}"""
 
 
 def scene_prompts_markdown(bk: BrandKit, project: Project, scene: Scene) -> str:
     """The combined scene-NN-prompts.md output written next to the scene JSON."""
     start = start_frame_prompt(bk, project, scene)
-    end = end_frame_prompt(bk, scene)
+    end = end_frame_prompt(bk, project, scene)
     veo = veo_motion_prompt(bk, project, scene)
     return f"""# Prompts — {scene.id}
 

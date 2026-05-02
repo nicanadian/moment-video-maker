@@ -243,17 +243,73 @@ def pick_clips_for_section(
     return picked[:target_count]
 
 
+def _select_cut_points(
+    start: float,
+    end: float,
+    n_clips: int,
+    grid: list[float],
+    min_clip: float,
+) -> list[float]:
+    """Pick ``n_clips - 1`` cut points spread evenly across [start, end] and
+    snapped to the nearest grid value (downbeat / beat) where possible.
+
+    Two-pass design: compute the *ideal* even-distribution cut targets first,
+    then snap each to the closest grid value within a window that respects
+    floor (`prev + min_clip`) and ceiling (`end - remaining * min_clip`).
+
+    A single forward-greedy walk used to pile all the slack onto the last
+    clip; this distributes it.
+    """
+    if n_clips <= 1:
+        return []
+    even = (end - start) / n_clips
+    targets = [start + i * even for i in range(1, n_clips)]
+
+    cuts: list[float] = []
+    prev = start
+    for i, target in enumerate(targets):
+        remaining = n_clips - i - 1
+        floor = prev + min_clip
+        ceiling = end - remaining * min_clip
+        if floor > ceiling:
+            # Section is too short to honor min_clip everywhere; degrade
+            # gracefully to even distribution.
+            cuts.append(max(prev + min_clip, target))
+            prev = cuts[-1]
+            continue
+        if grid:
+            in_window = [t for t in grid if floor <= t <= ceiling]
+            if in_window:
+                cut = min(in_window, key=lambda t: abs(t - target))
+            else:
+                cut = max(floor, min(ceiling, target))
+        else:
+            cut = max(floor, min(ceiling, target))
+        cuts.append(cut)
+        prev = cut
+    return cuts
+
+
 def build_moment(
     moment_id: str,
     project: Project,
     section: Section,
     clips: list[tuple[Scene, ClipTake]],
     strategy: str,
+    beat_grid: list[float] | None = None,
 ) -> Moment:
-    """Assemble a Variant Builder–compatible Moment spec from a section + clips."""
+    """Assemble a Variant Builder–compatible Moment spec from a section + clips.
+
+    Cut points snap to the nearest downbeat (or beat) ≥ ``audio_offset + min_clip``
+    so the visual edit lines up with the music. The title card *overlays* the
+    section start — it does not push audio_offset forward (review-feedback,
+    editor #4 + #5; QA #critical-6).
+    """
     section_duration = section.end - section.start
     title_card_duration = 1.5
     end_card_duration = 2.5
+    min_clip_duration = 4.0
+    n = len(clips)
 
     segments: list[Segment] = []
     segments.append(
@@ -266,25 +322,30 @@ def build_moment(
         )
     )
 
-    audio_offset = section.start + title_card_duration
-    for scene, clip in clips:
-        clip_duration = float(scene.duration_target_seconds or 6.0)
+    grid = beat_grid or []
+    cuts = _select_cut_points(section.start, section.end, n, grid, min_clip_duration)
+    boundaries = [section.start, *cuts, section.end]
+
+    for i, (scene, clip) in enumerate(clips):
+        audio_offset = boundaries[i]
+        clip_end = boundaries[i + 1]
+        clip_duration = max(min_clip_duration, clip_end - audio_offset)
         source = f"scenes/{scene.concept_id}/{scene.id}-clips/{clip.file}"
         segments.append(
             Segment(
                 type="clip",
                 source=source,
-                audio_offset=round(audio_offset, 2),
-                duration=clip_duration,
+                audio_offset=round(audio_offset, 3),
+                duration=round(clip_duration, 3),
+                in_point=0.0,
+                out_point=round(clip_duration, 3),
             )
         )
-        audio_offset += clip_duration
 
     segments.append(
         Segment(
             type="end_card",
             duration=end_card_duration,
-            image="../shared/end-cards/stream-now.png",
         )
     )
 
@@ -298,7 +359,6 @@ def build_moment(
         ),
         edit_strategy=strategy,
         segments=segments,
-        captions_source="captions/main.srt",
         status="pending_review",
         created_at=now,
         updated_at=now,
@@ -326,6 +386,9 @@ def suggest_moments(
     if not sections:
         return []
 
+    # Prefer downbeats for cut alignment; fall back to the beat grid.
+    beat_grid = song_analysis.downbeat_seconds or song_analysis.beat_grid_seconds
+
     moments: list[Moment] = []
     section_use_count: dict[str, int] = {}
     clip_use_count: dict[str, int] = {}
@@ -342,7 +405,7 @@ def suggest_moments(
 
         section_slug = slugify(section.name) or "section"
         moment_id = f"moment-{i + 1:02d}-{section_slug}"
-        moment = build_moment(moment_id, project, section, clips, strategy)
+        moment = build_moment(moment_id, project, section, clips, strategy, beat_grid=beat_grid)
         moments.append(moment)
 
     return moments

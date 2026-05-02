@@ -112,12 +112,13 @@ def prompts_cmd(scene_id: str, copy: bool) -> None:
 
 # --- Frames and clips -------------------------------------------------------
 
-@main.command("import-frame", help="Import a frame PNG into a scene.")
+@main.command("import-frame", help="Import a frame PNG into a scene (copies by default).")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
 @click.option("--scene", "scene_id", required=True)
 @click.option("--type", "frame_type", type=click.Choice(["start", "end"]), required=True)
-def import_frame_cmd(file: str, scene_id: str, frame_type: str) -> None:
-    cmd_media.run_import_frame(file, scene_id, frame_type)
+@click.option("--move", is_flag=True, help="Move the source file instead of copying.")
+def import_frame_cmd(file: str, scene_id: str, frame_type: str, move: bool) -> None:
+    cmd_media.run_import_frame(file, scene_id, frame_type, move)
 
 
 @main.command("select-frame", help="Mark one frame as the selected start/end for a scene.")
@@ -128,13 +129,16 @@ def select_frame_cmd(scene_id: str, frame_type: str, filename: str) -> None:
     cmd_media.run_select_frame(scene_id, frame_type, filename)
 
 
-@main.command("import-clip", help="Import a Veo output clip into a scene.")
+@main.command("import-clip", help="Import a Veo output clip into a scene (copies by default).")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
 @click.option("--scene", "scene_id", required=True)
 @click.option("--rating", type=click.IntRange(1, 5))
 @click.option("--notes", default="")
-def import_clip_cmd(file: str, scene_id: str, rating: int | None, notes: str) -> None:
-    cmd_media.run_import_clip(file, scene_id, rating, notes)
+@click.option("--move", is_flag=True, help="Move the source file instead of copying.")
+def import_clip_cmd(
+    file: str, scene_id: str, rating: int | None, notes: str, move: bool
+) -> None:
+    cmd_media.run_import_clip(file, scene_id, rating, notes, move)
 
 
 @main.command("select-clip", help="Mark one clip as the chosen take for a scene.")
