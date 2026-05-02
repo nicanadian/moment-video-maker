@@ -149,7 +149,8 @@ def run_review_moment(moment_id: str, approve: bool, reject: bool) -> None:
                 f"  {i}. [CLIP ] {seg.source} @ {seg.audio_offset:.1f}s ({seg.duration:.1f}s)"
             )
         elif seg.type == "end_card":
-            click.echo(f"  {i}. [END  ] {seg.image} ({seg.duration:.1f}s)")
+            img = seg.image or "(default end card)"
+            click.echo(f"  {i}. [END  ] {img} ({seg.duration:.1f}s)")
     click.echo("")
 
     if approve and reject:

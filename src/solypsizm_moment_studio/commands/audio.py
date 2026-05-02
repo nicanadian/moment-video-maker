@@ -14,7 +14,7 @@ from solypsizm_moment_studio.state import (
 )
 
 
-def run_analyze(force: bool, lyrics_aware: bool) -> None:
+def run_analyze(force: bool) -> None:
     root = require_project_root()
     project = load_project(root)
     audio_file = root / project.audio_file
@@ -28,9 +28,6 @@ def run_analyze(force: bool, lyrics_aware: bool) -> None:
             f"{out_path.relative_to(root)} already exists. Pass --force to regenerate "
             "(your manual edits will be lost)."
         )
-
-    if lyrics_aware:
-        click.echo("⚠ --lyrics-aware not implemented yet; running standard pipeline.", err=True)
 
     try:
         from solypsizm_moment_studio.analysis import analyze_audio

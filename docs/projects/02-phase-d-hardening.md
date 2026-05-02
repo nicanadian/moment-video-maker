@@ -1,6 +1,6 @@
 # Phase D: hardening + feedback response
 
-**Status:** in-progress (D1 partial + D2 + D3.1 + D4.1/2/3/4/5 + agent-found bug fixes landed; D1.3/D1.4/D1.8/D3 remainder/D4.6+ remaining)
+**Status:** v1 ready (all in-scope items landed + panel review fixes incorporated; D6 deferred extras and D3 remainder explicitly v1.1 scope)
 **Owner:** Nic
 **Started:** 2026-05-01
 **Trigger:** three-reviewer audit (video editing expert / QA engineer / system operator)

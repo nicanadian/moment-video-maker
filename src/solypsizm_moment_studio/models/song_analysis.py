@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Section(BaseModel):
@@ -19,6 +19,6 @@ class SongAnalysis(BaseModel):
     duration_seconds: float
     tempo_bpm: float
     key: str = ""
-    sections: list[Section] = []
-    beat_grid_seconds: list[float] = []
-    downbeat_seconds: list[float] = []
+    sections: list[Section] = Field(default_factory=list)
+    beat_grid_seconds: list[float] = Field(default_factory=list)
+    downbeat_seconds: list[float] = Field(default_factory=list)

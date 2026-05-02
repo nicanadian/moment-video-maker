@@ -128,7 +128,9 @@ def score_clip_for_section(
         if fit_lower == section.name.lower():
             fit_score = 1.0
             break
-        if kind and kind in fit_lower:
+        # Compare section *kinds* so "chorus" doesn't match "pre-chorus" via
+        # substring (the bug-of-record from the staff-eng review).
+        if kind and section_kind(fit_lower) == kind:
             fit_score = max(fit_score, 0.7)
 
     target_bucket = energy_bucket(section.energy_avg)

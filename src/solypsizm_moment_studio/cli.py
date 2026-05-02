@@ -172,10 +172,9 @@ def review_clips_cmd(scene_id: str) -> None:
 # --- Song analysis ----------------------------------------------------------
 
 @main.command("analyze", help="Run librosa song analysis → audio/song-analysis.json.")
-@click.option("--force", is_flag=True, help="Overwrite an existing analysis (loses manual edits).")
-@click.option("--lyrics-aware", is_flag=True, help="(Phase D) align lyrics to sections.")
-def analyze_cmd(force: bool, lyrics_aware: bool) -> None:
-    cmd_audio.run_analyze(force, lyrics_aware)
+@click.option("--force", is_flag=True, help="Regenerate (shows a diff and confirms before overwriting).")
+def analyze_cmd(force: bool) -> None:
+    cmd_audio.run_analyze(force)
 
 
 @main.command("sections", help="Print the detected sections table.")

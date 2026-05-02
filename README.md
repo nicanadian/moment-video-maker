@@ -43,6 +43,36 @@ pip install -e ".[dev,audio]"     # adds librosa + pydub for `analyze`
 pip install -e ".[dev,api]"       # adds OpenAI client (planned for v2)
 ```
 
+## Where your work lives
+
+The repo holds the **tool** + the **brand kit source**. Your **project state** lives outside the repo, under `~/solypsizm/`:
+
+```
+~/solypsizm/                   # default; override with SOLYPSIZM_HOME
+  brand-kit.json               # mirrored from this repo by `bootstrap-brand-kit`
+  character-reference/         # canonical avatar PNGs (front, etc.)
+  haze/                        # one folder per song
+    project.json
+    lyrics.txt
+    audio/master.{wav,mp3,...}
+    concepts/, scenes/, moments/
+    .state/log.jsonl
+```
+
+- **Back up `~/solypsizm/`** — that's where your concepts, scenes, prompts, and moment specs live. The repo doesn't carry it.
+- **Don't commit `~/solypsizm/`** — it's outside the repo on purpose.
+- **Brand kit edits**: change `brand-kit.json` in this repo (it's source-of-truth), then `solypsizm bootstrap-brand-kit --source ./brand-kit.json --force` to refresh `~/solypsizm/brand-kit.json`. The CLI reads from `~/solypsizm/`, not the repo.
+- **Override the home** via `export SOLYPSIZM_HOME=/path/to/throwaway` (useful for testing).
+
+## Platform
+
+- **macOS** (primary): everything works. Clipboard via `pbcopy`, audio playback via `ffplay`, `review-clips` opens Finder.
+- **Linux** (secondary): core commands work; `pbcopy`/`open` are macOS-only and silently no-op there.
+
+## Render handoff
+
+`solypsizm render-moment <id>` and `render-all` print the spec path with exit zero and a stderr note. **No actual rendering happens yet** — that's the separate Variant Builder tool (PRD §20). The spec on disk is the artifact downstream consumes when that ships.
+
 ## Daily-use tips
 
 - Set `SOLYPSIZM_PROJECT=haze` (or pass `--project haze`) to operate on a project from any directory.

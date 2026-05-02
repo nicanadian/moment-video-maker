@@ -19,15 +19,15 @@ class CharacterSpec(BaseModel):
     # Path to the canonical reference PNG, relative to the brand-kit.json file.
     reference_image: str = ""
     # Optional dict of named pose references (front, back, walking-side, etc.).
-    reference_images: dict[str, str] = {}
+    reference_images: dict[str, str] = Field(default_factory=dict)
 
 
 class Aesthetic(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     palette: dict[str, str]
-    palette_usage: dict[str, str] = {}
-    color_grade: list[str] = []
+    palette_usage: dict[str, str] = Field(default_factory=dict)
+    color_grade: list[str] = Field(default_factory=list)
     lighting_cues: str = ""
 
 
@@ -50,7 +50,7 @@ class VeoPromptConstants(BaseModel):
     aspect: str = "vertical 9:16, 1080x1920"
     duration: str = "~6 seconds, continuous take, locked framing, no cuts"
     audio: str = "silent video — no music, no dialogue, no foley, no SFX"
-    style: list[str] = []
+    style: list[str] = Field(default_factory=list)
 
 
 class BrandKit(BaseModel):
@@ -60,11 +60,11 @@ class BrandKit(BaseModel):
     artist: str = "Solypsizm"
     character: CharacterSpec
     aesthetic: Aesthetic
-    negative_prompt_items: list[str] = []
-    always_include_in_image_prompts: list[str] = []
-    always_include_in_veo_prompts: list[str] = []
-    veo_prompt: VeoPromptConstants = VeoPromptConstants()
-    song_themes: dict[str, SongTheme] = {}
+    negative_prompt_items: list[str] = Field(default_factory=list)
+    always_include_in_image_prompts: list[str] = Field(default_factory=list)
+    always_include_in_veo_prompts: list[str] = Field(default_factory=list)
+    veo_prompt: VeoPromptConstants = Field(default_factory=VeoPromptConstants)
+    song_themes: dict[str, SongTheme] = Field(default_factory=dict)
 
     def negative_prompt_string(self) -> str:
         return ", ".join(self.negative_prompt_items)

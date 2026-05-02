@@ -35,14 +35,17 @@ from solypsizm_moment_studio.utils import (
 
 
 def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
+    # Mirrors commands/concepts.py — keeps project.brand_kit_path live.
     root = require_project_root()
-    bk_path = brand_kit_path()
+    project = load_project(root)
+    candidate = (root / project.brand_kit_path).resolve()
+    bk_path = candidate if candidate.is_file() else brand_kit_path()
     if not bk_path.is_file():
         raise click.ClickException(
-            f"Brand kit not found at {bk_path}. Run `solypsizm bootstrap-brand-kit` first."
+            f"Brand kit not found at {candidate} or {brand_kit_path()}. "
+            "Run `solypsizm bootstrap-brand-kit` first."
         )
     bk = load_brand_kit(bk_path)
-    project = load_project(root)
     return root, bk, project
 
 

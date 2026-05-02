@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Project(BaseModel):
@@ -14,7 +14,7 @@ class Project(BaseModel):
     target_moment_count: int = 9
     current_concept: str | None = None
     current_scene: str | None = None
-    concepts: list[str] = []
+    concepts: list[str] = Field(default_factory=list)
     moments_completed: int = 0
     created_at: str
     updated_at: str

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 MomentStatus = Literal["pending_review", "approved", "rejected", "rendered"]
 
@@ -44,7 +44,7 @@ class Moment(BaseModel):
     duration_target_seconds: float
     source_song_section: SourceSongSection
     edit_strategy: str = "section_focus"
-    segments: list[Segment] = []
+    segments: list[Segment] = Field(default_factory=list)
     captions_source: str | None = None
     status: MomentStatus = "pending_review"
     rendered_to: str | None = None

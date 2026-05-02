@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 SceneStatus = Literal["draft", "prompts_ready", "frames_imported", "clips_imported", "complete"]
 
@@ -46,12 +46,12 @@ class Scene(BaseModel):
     subject_motion: str = ""
     environment: str = ""
     lighting: str = ""
-    mood_tags: list[str] = []
-    song_section_fit: list[str] = []
+    mood_tags: list[str] = Field(default_factory=list)
+    song_section_fit: list[str] = Field(default_factory=list)
     energy_target: str = "low-mid"
-    prompts: FramePrompts = FramePrompts()
-    frames: dict[str, list[Frame]] = {"start": [], "end": []}
-    clip_takes: list[ClipTake] = []
+    prompts: FramePrompts = Field(default_factory=FramePrompts)
+    frames: dict[str, list[Frame]] = Field(default_factory=lambda: {"start": [], "end": []})
+    clip_takes: list[ClipTake] = Field(default_factory=list)
     status: SceneStatus = "draft"
     created_at: str
     updated_at: str
