@@ -23,7 +23,13 @@ def test_slugify_empty_returns_fallback() -> None:
 
 
 def test_slugify_max_words_truncates() -> None:
-    assert slugify("the quick brown fox jumps", max_words=3) == "the-quick-brown"
+    # Stopword filter drops "the", then max_words=3 keeps the first three remaining.
+    assert slugify("the quick brown fox jumps", max_words=3) == "quick-brown-fox"
+
+
+def test_slugify_drops_stopwords() -> None:
+    assert slugify("Abandoned Watchtower at Dawn") == "abandoned-watchtower-dawn"
+    assert slugify("Empty Highway with Headlights") == "empty-highway-headlights"
 
 
 def test_slugify_custom_fallback() -> None:

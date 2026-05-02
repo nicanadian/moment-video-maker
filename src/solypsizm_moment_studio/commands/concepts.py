@@ -23,7 +23,7 @@ from solypsizm_moment_studio.state import (
     save_concept,
     save_project,
 )
-from solypsizm_moment_studio.utils import clipboard_copy, slugify
+from solypsizm_moment_studio.utils import clipboard_copy, coerce_str_list, slugify
 
 
 def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
@@ -78,13 +78,16 @@ def run_import_concepts(input_file) -> None:
     created: list[str] = []
     for offset, raw in enumerate(items):
         idx = next_idx + offset
-        title = str(raw.get("title", "")).strip() or f"untitled-{idx}"
-        concept_id = f"concept-{idx:02d}-{slugify(title, max_words=4)}"
+        # Preserve the artist's display title verbatim (even unicode-only) and
+        # only fall back the slug when slugify would yield empty.
+        title_raw = str(raw.get("title", "")).strip()
+        title = title_raw or f"Concept {idx}"
+        concept_id = f"concept-{idx:02d}-{slugify(title, max_words=4, fallback='untitled')}"
         concept = Concept(
             id=concept_id,
             title=title,
             summary=str(raw.get("summary", "")),
-            song_themes_referenced=list(raw.get("song_themes_referenced", []) or []),
+            song_themes_referenced=coerce_str_list(raw.get("song_themes_referenced")),
             brand_alignment_notes=str(raw.get("brand_alignment_notes", "")),
             estimated_runtime_seconds=int(raw.get("estimated_runtime_seconds", 22) or 22),
             scene_count=int(raw.get("scene_count", 4) or 4),

@@ -31,12 +31,23 @@ def find_project_root(start: Path | None = None) -> Path | None:
         cur = cur.parent
 
 
-def require_project_root(start: Path | None = None) -> Path:
-    """Find a project root or raise. Caller can also pass a slug via --project."""
+def require_project_root(start: Path | None = None, slug: str | None = None) -> Path:
+    """Resolve a project root from (in order): an explicit slug → ``SOLYPSIZM_PROJECT``
+    env var → walking up from CWD. Raises FileNotFoundError if none resolves.
+    """
+    if slug is None:
+        slug = os.environ.get("SOLYPSIZM_PROJECT") or None
+    if slug:
+        target = project_dir(slug)
+        if (target / "project.json").is_file():
+            return target
+        raise FileNotFoundError(
+            f"No project.json at {target}. Check the slug or run `solypsizm new {slug}`."
+        )
     root = find_project_root(start)
     if root is None:
         raise FileNotFoundError(
             "No project.json found in the current directory or its parents. "
-            "Run `solypsizm new <slug>` first or cd into a project."
+            "Run `solypsizm new <slug>` first, cd into a project, or pass --project <slug>."
         )
     return root

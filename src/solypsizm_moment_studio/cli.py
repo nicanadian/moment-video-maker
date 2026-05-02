@@ -194,6 +194,11 @@ def suggest_moments_cmd(count: int, strategy: str) -> None:
     cmd_moments.run_suggest_moments(count, strategy)
 
 
+@main.command("list-moments", help="List all moment specs and their status.")
+def list_moments_cmd() -> None:
+    cmd_moments.run_list_moments()
+
+
 @main.command("review-moment", help="Review a moment, hear its audio range, approve or reject.")
 @click.argument("moment_id")
 @click.option("--approve", is_flag=True, help="Skip the prompt and approve.")

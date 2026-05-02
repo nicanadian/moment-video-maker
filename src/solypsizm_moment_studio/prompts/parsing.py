@@ -116,11 +116,25 @@ def _coerce_to_list(parsed: Any, list_keys: tuple[str, ...]) -> list[dict]:
     return out
 
 
+def _require_titled(items: list[dict], kind: str) -> list[dict]:
+    """Each item must have a non-empty 'title' field, otherwise it's almost
+    certainly garbage that the wrap-as-list code branch swallowed."""
+    for i, item in enumerate(items):
+        title = item.get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise ParseError(
+                f"{kind} item {i} is missing a non-empty 'title' field."
+            )
+    return items
+
+
 def parse_concepts_response(text: str) -> list[dict]:
     """Parse a ChatGPT brainstorm response into a list of concept dicts."""
-    return _coerce_to_list(_parse_json_lenient(text), ("concepts",))
+    items = _coerce_to_list(_parse_json_lenient(text), ("concepts",))
+    return _require_titled(items, "Concept")
 
 
 def parse_scenes_response(text: str) -> list[dict]:
     """Parse a ChatGPT scene-breakdown response into a list of scene dicts."""
-    return _coerce_to_list(_parse_json_lenient(text), ("scenes",))
+    items = _coerce_to_list(_parse_json_lenient(text), ("scenes",))
+    return _require_titled(items, "Scene")

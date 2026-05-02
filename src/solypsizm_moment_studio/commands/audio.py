@@ -39,7 +39,16 @@ def run_analyze(force: bool, lyrics_aware: bool) -> None:
         ) from e
 
     click.echo(f"Analyzing {project.audio_file}...", err=True)
-    analysis = analyze_audio(audio_file, project.audio_file)
+    try:
+        analysis = analyze_audio(audio_file, project.audio_file)
+    except Exception as e:
+        # librosa / audioread / soundfile failures bubble out as Python tracebacks
+        # without this. Common cases: corrupt WAV, missing ffmpeg for non-WAV
+        # formats, all-zero buffer crashing beat_track.
+        raise click.ClickException(
+            f"Audio analysis failed: {type(e).__name__}: {e}. "
+            "Check the audio file is valid and ffmpeg is installed for non-WAV formats."
+        ) from e
     save_song_analysis(root, analysis)
     append_log(
         root,

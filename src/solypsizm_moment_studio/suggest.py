@@ -372,26 +372,35 @@ def suggest_moments(
     cfg: EditConfig,
     count: int,
     strategy: str = "section_focus",
-) -> list[Moment]:
-    """Top-level entry: produce up to `count` Moment specs.
+    start_index: int = 1,
+    reserved_ids: set[str] | None = None,
+) -> tuple[list[Moment], str | None]:
+    """Top-level entry: produce up to ``count`` Moment specs.
 
-    Stops early if the clip pool can't satisfy ``cfg.min_clips_per_moment``.
+    Returns ``(moments, stop_reason)`` so callers can explain why fewer than
+    ``count`` were produced. ``stop_reason`` is ``None`` on full success.
+
+    ``start_index`` lets callers continue numbering past existing moments
+    (so re-running suggest-moments doesn't overwrite previous output).
+    ``reserved_ids`` is the set of moment IDs already on disk; if a generated
+    id collides we append ``-2`` / ``-3`` to disambiguate.
     """
     pool = candidate_clips(scenes, cfg.min_clip_rating)
     if not pool:
-        return []
+        return [], "no clips with rating ≥ min and at least one mood tag"
 
     min_section_duration = max(8.0, cfg.min_clips_per_moment * 4.0)
     sections = filter_sections(song_analysis.sections, min_section_duration)
     if not sections:
-        return []
+        return [], "no song sections long enough to host a moment"
 
-    # Prefer downbeats for cut alignment; fall back to the beat grid.
     beat_grid = song_analysis.downbeat_seconds or song_analysis.beat_grid_seconds
+    reserved = set(reserved_ids or set())
 
     moments: list[Moment] = []
     section_use_count: dict[str, int] = {}
     clip_use_count: dict[str, int] = {}
+    stop_reason: str | None = None
 
     for i in range(count):
         section = pick_section(sections, section_use_count)
@@ -399,13 +408,26 @@ def suggest_moments(
 
         clips = pick_clips_for_section(pool, section, cfg, clip_use_count, strategy)
         if len(clips) < cfg.min_clips_per_moment:
-            break  # Pool exhausted relative to reuse cap; stop early.
+            stop_reason = (
+                f"clip pool exhausted at {len(moments)} moment(s) — "
+                f"each clip can be used at most {cfg.max_clip_reuse_count} times "
+                f"and {cfg.min_clips_per_moment} are needed per moment"
+            )
+            break
         for _scene, clip in clips:
             clip_use_count[clip.file] = clip_use_count.get(clip.file, 0) + 1
 
         section_slug = slugify(section.name) or "section"
-        moment_id = f"moment-{i + 1:02d}-{section_slug}"
-        moment = build_moment(moment_id, project, section, clips, strategy, beat_grid=beat_grid)
+        seq = start_index + i
+        base_id = f"moment-{seq:02d}-{section_slug}"
+        candidate = base_id
+        suffix = 1
+        while candidate in reserved:
+            suffix += 1
+            candidate = f"{base_id}-{suffix}"
+        reserved.add(candidate)
+
+        moment = build_moment(candidate, project, section, clips, strategy, beat_grid=beat_grid)
         moments.append(moment)
 
-    return moments
+    return moments, stop_reason

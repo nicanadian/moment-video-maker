@@ -25,7 +25,7 @@ from solypsizm_moment_studio.state import (
     save_scene,
 )
 from solypsizm_moment_studio.state.io import load_scene as _load_scene
-from solypsizm_moment_studio.utils import clipboard_copy, now_iso, slugify
+from solypsizm_moment_studio.utils import clipboard_copy, coerce_str_list, now_iso, slugify
 
 
 def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
@@ -81,8 +81,9 @@ def run_import_scenes(input_file) -> None:
     created: list[str] = []
     for offset, raw in enumerate(items):
         idx = next_idx + offset
-        title = str(raw.get("title", "")).strip() or f"scene-{idx}"
-        scene_id = f"scene-{idx:02d}-{slugify(title, max_words=4)}"
+        title_raw = str(raw.get("title", "")).strip()
+        title = title_raw or f"Scene {idx}"
+        scene_id = f"scene-{idx:02d}-{slugify(title, max_words=4, fallback='untitled')}"
         scene = Scene(
             id=scene_id,
             concept_id=concept.id,
@@ -94,8 +95,8 @@ def run_import_scenes(input_file) -> None:
             subject_motion=str(raw.get("subject_motion", "")),
             environment=str(raw.get("environment", "")),
             lighting=str(raw.get("lighting", "")),
-            mood_tags=list(raw.get("mood_tags", []) or []),
-            song_section_fit=list(raw.get("song_section_fit", []) or []),
+            mood_tags=coerce_str_list(raw.get("mood_tags")),
+            song_section_fit=coerce_str_list(raw.get("song_section_fit")),
             energy_target=str(raw.get("energy_target", "low-mid") or "low-mid"),
             prompts=FramePrompts(),
             created_at=now,

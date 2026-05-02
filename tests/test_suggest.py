@@ -216,7 +216,7 @@ def _diverse_scene_pool() -> list[Scene]:
 
 
 def test_suggest_moments_produces_requested_count_when_pool_is_rich() -> None:
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=_song(),
         scenes=_diverse_scene_pool(),
@@ -234,7 +234,7 @@ def test_suggest_moments_produces_requested_count_when_pool_is_rich() -> None:
 
 
 def test_suggest_moments_rotates_song_sections() -> None:
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=_song(),
         scenes=_diverse_scene_pool(),
@@ -252,7 +252,7 @@ def test_suggest_moments_rotates_song_sections() -> None:
 
 def test_suggest_moments_respects_max_clip_reuse() -> None:
     cfg = EditConfig(max_clip_reuse_count=2)
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=_song(),
         scenes=_diverse_scene_pool(),
@@ -271,7 +271,7 @@ def test_suggest_moments_respects_max_clip_reuse() -> None:
 def test_suggest_moments_returns_empty_when_pool_too_small() -> None:
     # Only 1 candidate clip; min_clips_per_moment=3 → can't build any moment.
     scenes = [_scene("s1", moods=["release"], energy="high")]
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=_song(),
         scenes=scenes,
@@ -296,7 +296,7 @@ def test_first_clip_audio_offset_equals_section_start() -> None:
     """The title card overlays the music; the first clip starts exactly at section.start
     (no +1.5s shift). This was the load-bearing audio-alignment bug.
     """
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=_song(),
         scenes=_diverse_scene_pool(),
@@ -314,7 +314,7 @@ def test_first_clip_audio_offset_equals_section_start() -> None:
 
 def test_last_clip_ends_at_section_end() -> None:
     """Sum of clip durations covers exactly the section duration — never overruns."""
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=_song(),
         scenes=_diverse_scene_pool(),
@@ -343,7 +343,7 @@ def test_clips_snap_to_downbeat_grid_when_provided() -> None:
         # 4 downbeats inside the section: 24.0 / 28.5 / 33.0 / 37.5
         downbeat_seconds=[20.0, 24.0, 28.5, 33.0, 37.5, 40.0],
     )
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=song,
         scenes=_diverse_scene_pool(),
@@ -362,7 +362,7 @@ def test_clips_snap_to_downbeat_grid_when_provided() -> None:
 
 
 def test_clips_have_in_point_and_out_point() -> None:
-    moments = suggest_moments(
+    moments, _ = suggest_moments(
         project=_project(),
         song_analysis=_song(),
         scenes=_diverse_scene_pool(),
@@ -374,6 +374,53 @@ def test_clips_have_in_point_and_out_point() -> None:
         if seg.type == "clip":
             assert seg.in_point == 0.0
             assert seg.out_point is not None and seg.out_point > 0
+
+
+def test_suggest_moments_continues_numbering_via_start_index() -> None:
+    """Re-running suggest-moments must produce different IDs, not clobber."""
+    moments_first, _ = suggest_moments(
+        project=_project(), song_analysis=_song(), scenes=_diverse_scene_pool(),
+        cfg=EditConfig(), count=2, strategy="section_focus", start_index=1,
+    )
+    moments_second, _ = suggest_moments(
+        project=_project(), song_analysis=_song(), scenes=_diverse_scene_pool(),
+        cfg=EditConfig(), count=2, strategy="section_focus",
+        start_index=len(moments_first) + 1,
+        reserved_ids={m.id for m in moments_first},
+    )
+    first_ids = {m.id for m in moments_first}
+    second_ids = {m.id for m in moments_second}
+    assert not (first_ids & second_ids), (
+        f"second run reused IDs: {first_ids & second_ids}"
+    )
+    # Sequential numbering — first batch has moment-01..02, second 03..04.
+    nums = sorted(int(m.id.split("-")[1]) for m in moments_first + moments_second)
+    assert nums == [1, 2, 3, 4]
+
+
+def test_suggest_moments_disambiguates_id_collisions_with_suffix() -> None:
+    """If a generated ID collides with a reserved ID, append -2 / -3."""
+    reserved = {"moment-01-intro"}
+    moments, _ = suggest_moments(
+        project=_project(), song_analysis=_song(), scenes=_diverse_scene_pool(),
+        cfg=EditConfig(), count=1, strategy="section_focus",
+        start_index=1,  # would naturally collide
+        reserved_ids=reserved,
+    )
+    # The first natural ID is "moment-01-intro" but it's reserved, so we
+    # should get "moment-01-intro-2" (or similar suffix).
+    assert moments[0].id != "moment-01-intro"
+    assert moments[0].id not in reserved
+
+
+def test_suggest_moments_returns_stop_reason_when_pool_too_small() -> None:
+    moments, reason = suggest_moments(
+        project=_project(), song_analysis=_song(),
+        scenes=[_scene("s1", moods=["release"])],
+        cfg=EditConfig(), count=4, strategy="section_focus",
+    )
+    assert moments == []
+    assert reason is not None and "exhaust" in reason.lower() or "pool" in reason.lower() or "rating" in reason.lower()
 
 
 def test_tension_release_leads_with_low_energy_clip_on_chorus() -> None:

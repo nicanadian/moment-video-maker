@@ -35,20 +35,30 @@ def run_suggest_moments(count: int, strategy: str | None) -> None:
     scenes = list_scenes(root)
     chosen_strategy = strategy or "section_focus"
 
-    moments = suggest_moments(
+    # Existing moments stay put — running suggest-moments again continues the
+    # numbering past whatever's already on disk and never overwrites approved
+    # work.
+    existing = list_moments(root)
+    existing_ids = {m.id for m in existing}
+    start_index = len(existing) + 1
+
+    moments, stop_reason = suggest_moments(
         project=project,
         song_analysis=song_analysis,
         scenes=scenes,
         cfg=cfg,
         count=count,
         strategy=chosen_strategy,
+        start_index=start_index,
+        reserved_ids=existing_ids,
     )
 
     if not moments:
+        reason = stop_reason or "unknown"
         raise click.ClickException(
             "Couldn't generate any moments. Need at least "
             f"{cfg.min_clips_per_moment} clips rated ≥ {cfg.min_clip_rating} "
-            "with mood tags, plus a song analysis."
+            f"with mood tags, plus a song analysis. Reason: {reason}."
         )
 
     for m in moments:
@@ -62,7 +72,13 @@ def run_suggest_moments(count: int, strategy: str | None) -> None:
         ids=[m.id for m in moments],
     )
 
-    click.echo(f"✓ Generated {len(moments)} moment spec(s):")
+    if existing:
+        click.echo(
+            f"({len(existing)} existing moment(s) preserved; numbering continues from "
+            f"moment-{start_index:02d})",
+            err=True,
+        )
+    click.echo(f"✓ Generated {len(moments)} new moment spec(s):")
     click.echo("")
     click.echo(f"{'id':<40} {'section':<14} {'clips':<6} {'duration':<9}")
     click.echo("-" * 75)
@@ -72,8 +88,29 @@ def run_suggest_moments(count: int, strategy: str | None) -> None:
             f"{m.id:<40} {m.source_song_section.name:<14} "
             f"{clip_count:<6} {m.duration_target_seconds:.1f}s"
         )
+    if len(moments) < count:
+        click.echo("")
+        click.echo(
+            f"⚠ Requested {count}, produced {len(moments)}. "
+            f"Reason: {stop_reason or 'see clip pool / section coverage'}."
+        )
     click.echo("")
     click.echo("Run `solypsizm review-moment <id>` to approve or reject each.")
+
+
+def run_list_moments() -> None:
+    root = require_project_root()
+    moments = list_moments(root)
+    if not moments:
+        click.echo("No moments yet. Run `solypsizm suggest-moments` to start.")
+        return
+    click.echo(f"{'id':<40} {'status':<16} {'section':<14} clips")
+    click.echo("-" * 80)
+    for m in moments:
+        clip_count = sum(1 for s in m.segments if s.type == "clip")
+        click.echo(
+            f"{m.id:<40} {m.status:<16} {m.source_song_section.name:<14} {clip_count}"
+        )
 
 
 def run_review_moment(moment_id: str, approve: bool, reject: bool) -> None:
