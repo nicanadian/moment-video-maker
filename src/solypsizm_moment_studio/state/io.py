@@ -32,13 +32,28 @@ def load_json(path: Path) -> Any:
 
 
 def save_json_atomic(path: Path, data: Any) -> None:
-    """Write to <path>.tmp and rename, so a crash mid-write can't corrupt the target."""
+    """Crash-safe write: fsync(tmp) → rename → fsync(parent dir).
+
+    Without the fsyncs, a power loss between the rename and the kernel
+    flushing dirty pages can leave a zero-length project.json on APFS / ext4.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     with tmp.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
+        f.flush()
+        os.fsync(f.fileno())
     os.replace(tmp, path)
+    # fsync the directory so the rename itself is durable.
+    try:
+        dir_fd = os.open(path.parent, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
 
 
 def load_brand_kit(path: Path) -> BrandKit:
@@ -165,9 +180,23 @@ def load_edit_config() -> EditConfig:
 
 
 def append_log(root: Path, event_type: str, **fields: Any) -> None:
-    """Append a JSON line to .state/log.jsonl for traceability."""
+    """Append a JSON line to .state/log.jsonl for traceability.
+
+    Uses an exclusive flock so two `solypsizm` invocations writing at the
+    same time can't interleave bytes mid-line. fsync after write so a crash
+    doesn't lose the just-recorded event.
+    """
+    import fcntl
+
     log_path = root / ".state" / "log.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     record = {"ts": now_iso(), "event": event_type, **fields}
+    line = json.dumps(record, ensure_ascii=False) + "\n"
     with log_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        try:
+            f.write(line)
+            f.flush()
+            os.fsync(f.fileno())
+        finally:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)

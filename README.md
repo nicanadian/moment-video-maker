@@ -8,28 +8,52 @@ See `ref-docs/Solypsizm Moment Studio - PRD.md` for the full spec, and `docs/pro
 
 ## Status
 
-v0.1.0 — scaffolding only. CLI surface defined; commands raise "not implemented yet". Phase A (prompt scaffolding) is the next build target.
+v0.1.0 — Phases A + B + C + D landed. End-to-end workflow runs; rendering hands off to a Variant Builder that doesn't exist yet. Test suite at 59/59.
 
-## Install (dev)
-
-```sh
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-solypsizm --help
-```
-
-Optional extras:
+## Cold start
 
 ```sh
-pip install -e ".[dev,audio]"   # adds librosa + pydub for `analyze`
-pip install -e ".[dev,api]"     # adds OpenAI client for --api mode
+# 1. Install
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,audio]"     # audio extras pull in librosa for `analyze`
+
+# 2. Install the brand kit into ~/solypsizm/
+solypsizm bootstrap-brand-kit --source ./brand-kit.json
+
+# 3. Sanity-check the environment (binaries, librosa, brand kit)
+solypsizm doctor --global
+
+# 4. Create your first project
+solypsizm new haze \
+  --song-title "Haze over the Horizon" \
+  --lyrics ./haze-lyrics.txt \
+  --audio ./haze-master.wav
+
+# 5. Let the tool tell you what to do next
+solypsizm --project haze status
 ```
+
+The `Next:` line in `status` names the concrete next command — start there and follow the trail through `brainstorm` → `import-concepts` → `pick-concept` → `scenes` → `import-scenes` → `prompts <scene>` → `import-frame` / `import-clip` → `analyze` → `suggest-moments` → `review-moment`.
+
+## Install variations
+
+```sh
+pip install -e ".[dev]"           # core + tests, no audio
+pip install -e ".[dev,audio]"     # adds librosa + pydub for `analyze`
+pip install -e ".[dev,api]"       # adds OpenAI client (planned for v2)
+```
+
+## Daily-use tips
+
+- Set `SOLYPSIZM_PROJECT=haze` (or pass `--project haze`) to operate on a project from any directory.
+- `solypsizm pick-scene <id>` sets a current scene; `--scene` is then optional on `import-frame` / `import-clip` / `prompts`.
+- IDs accept fuzzy matching: `solypsizm pick-concept watch` resolves to `concept-01-abandoned-watchtower-dawn`.
+- `solypsizm log --tail 20` for recent ops; `--event clip_imported` filters; `--all` dumps everything.
 
 ## Repo layout
 
 - `src/solypsizm_moment_studio/` — Python package.
-- `brand-kit.json` — locked Solypsizm character spec, palette, typography, per-song themes. Auto-injected into every generated prompt.
+- `brand-kit.json` + `character-reference/` — locked Solypsizm character spec and the canonical reference PNG. Auto-injected into every generated prompt; `bootstrap-brand-kit` mirrors both into `~/solypsizm/`.
 - `ref-docs/` — source PRD and brand-kit docx.
 - `docs/projects/` — one markdown file per feature/initiative.
 - `docs/prompts/` — markdown logs of AI ↔ user conversations driving the work.

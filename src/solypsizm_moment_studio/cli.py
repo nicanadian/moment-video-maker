@@ -186,13 +186,18 @@ def sections_cmd() -> None:
 # --- Diagnostics ------------------------------------------------------------
 
 @main.command("doctor", help="Validate project structure, file references, and brand kit.")
-def doctor_cmd() -> None:
-    cmd_diagnostic.run_doctor()
+@click.option("--global", "check_global", is_flag=True, help="Check CLI environment (binaries + brand kit) without a project.")
+def doctor_cmd(check_global: bool) -> None:
+    cmd_diagnostic.run_doctor(check_global=check_global)
 
 
 @main.command("log", help="Print the project's operation log.")
-def log_cmd() -> None:
-    cmd_diagnostic.run_log()
+@click.option("--tail", default=50, type=int, show_default=True, help="Show last N lines.")
+@click.option("--all", "show_all", is_flag=True, help="Show every logged event.")
+@click.option("--event", help="Filter to a single event type (e.g. clip_imported).")
+@click.option("--since", help="Only show events at or after this ISO timestamp.")
+def log_cmd(tail: int, show_all: bool, event: str | None, since: str | None) -> None:
+    cmd_diagnostic.run_log(tail, show_all, event, since)
 
 
 # --- Moments ----------------------------------------------------------------
@@ -201,9 +206,10 @@ def log_cmd() -> None:
 @click.option("--count", default=9, show_default=True)
 @click.option(
     "--strategy",
-    type=click.Choice(["tension_release", "section_focus"]),
+    type=click.Choice(["tension_release", "section_focus", "cold_hook"]),
     default="section_focus",
     show_default=True,
+    help="section_focus = even diversity. tension_release = low→high build. cold_hook = climax-first.",
 )
 def suggest_moments_cmd(count: int, strategy: str) -> None:
     cmd_moments.run_suggest_moments(count, strategy)

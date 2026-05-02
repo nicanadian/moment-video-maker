@@ -20,12 +20,14 @@ _FENCE_RE = re.compile(r"^```(?:json|JSON)?\s*\n(.*?)\n```\s*$", re.DOTALL | re.
 
 
 def _strip_code_fences(text: str) -> str:
+    # Strip a UTF-8 BOM at the head — some Windows clipboards / files carry it.
+    if text.startswith("﻿"):
+        text = text[1:]
     text = text.strip()
     m = _FENCE_RE.search(text)
     if m:
         return m.group(1).strip()
     if text.startswith("```"):
-        # Stripped form: leading fence, possibly no trailing fence.
         first_nl = text.find("\n")
         if first_nl != -1:
             text = text[first_nl + 1 :]

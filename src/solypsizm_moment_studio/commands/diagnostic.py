@@ -18,7 +18,60 @@ from solypsizm_moment_studio.state import (
 )
 
 
-def run_doctor() -> None:
+def _check_environment() -> tuple[list[str], list[str]]:
+    """Return (issues, info) about CLI environment: external bins + Python deps + SOLYPSIZM_HOME."""
+    import shutil as _sh
+
+    from solypsizm_moment_studio.state import brand_kit_path, solypsizm_home
+
+    issues: list[str] = []
+    info: list[str] = []
+
+    home = solypsizm_home()
+    info.append(f"SOLYPSIZM_HOME = {home}")
+    if not home.exists():
+        issues.append(f"SOLYPSIZM_HOME ({home}) doesn't exist; run `solypsizm bootstrap-brand-kit` to populate it.")
+
+    bk = brand_kit_path()
+    if bk.is_file():
+        info.append(f"brand-kit.json ✓ at {bk}")
+    else:
+        issues.append(f"brand-kit.json missing at {bk}; run `solypsizm bootstrap-brand-kit --source <path>`.")
+
+    for binary, role in [
+        ("ffplay", "audio preview during `review-moment`"),
+        ("ffmpeg", "non-WAV audio formats in `analyze`"),
+        ("pbcopy", "clipboard copy on macOS"),
+        ("open", "launching Finder from `review-clips`"),
+    ]:
+        path = _sh.which(binary)
+        if path:
+            info.append(f"{binary} ✓ ({path})")
+        else:
+            issues.append(f"{binary} not found — needed for {role}.")
+
+    try:
+        import librosa  # noqa: F401
+        info.append("librosa ✓ installed")
+    except ImportError:
+        issues.append("librosa not installed — `analyze` won't work. Run `pip install -e '.[audio]'`.")
+
+    return issues, info
+
+
+def run_doctor(check_global: bool = False) -> None:
+    if check_global:
+        issues, info = _check_environment()
+        for line in info:
+            click.echo(f"  {line}")
+        if not issues:
+            click.echo("\n✓ doctor (global): no issues.")
+            return
+        click.echo(f"\n✗ doctor (global) found {len(issues)} issue(s):")
+        for line in issues:
+            click.echo(f"  - {line}")
+        raise click.exceptions.Exit(1)
+
     root = require_project_root()
     issues: list[str] = []
 
@@ -93,23 +146,37 @@ def run_doctor() -> None:
     raise click.exceptions.Exit(1)
 
 
-def run_log() -> None:
+def run_log(tail: int, show_all: bool, event: str | None, since: str | None) -> None:
     root = require_project_root()
     log_path = root / ".state" / "log.jsonl"
     if not log_path.is_file():
         click.echo("(no operations logged yet)")
         return
+    records: list[dict] = []
     with log_path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.rstrip("\n")
             if not line:
                 continue
             try:
-                rec = json.loads(line)
+                records.append(json.loads(line))
             except json.JSONDecodeError:
-                click.echo(line)
-                continue
-            ts = rec.pop("ts", "")
-            event = rec.pop("event", "")
-            extra = " ".join(f"{k}={v}" for k, v in rec.items())
-            click.echo(f"{ts}  {event:<22} {extra}")
+                # Surface the corrupt line; don't drop it silently.
+                records.append({"ts": "", "event": "_unparsed", "raw": line})
+
+    # Apply filters.
+    if event:
+        records = [r for r in records if r.get("event") == event]
+    if since:
+        records = [r for r in records if str(r.get("ts", "")) >= since]
+    if not show_all and tail > 0:
+        records = records[-tail:]
+
+    if not records:
+        click.echo("(no matching events)")
+        return
+    for rec in records:
+        ts = rec.pop("ts", "")
+        evt = rec.pop("event", "")
+        extra = " ".join(f"{k}={v}" for k, v in rec.items())
+        click.echo(f"{ts}  {evt:<22} {extra}")

@@ -188,9 +188,16 @@ def _next_action_hint(
 
 
 def run_open(slug: str) -> None:
+    """Print path to stdout and a status summary to stderr.
+
+    Stdout-only path means `cd $(solypsizm open haze)` works cleanly — the
+    summary lands on the terminal (stderr) but doesn't pollute the cd target.
+    """
     root = project_dir(slug)
     if not (root / "project.json").is_file():
         raise click.ClickException(f"No project at {root}.")
-    # Print the path so the artist can `cd $(solypsizm open <slug>)`.
     click.echo(str(root))
-    run_status(slug)
+    project = load_project(root)
+    click.echo(f"# {project.song_slug} — {project.song_title}", err=True)
+    click.echo(f"# {root}", err=True)
+    click.echo("# (run `solypsizm status` for details)", err=True)

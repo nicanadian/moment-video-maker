@@ -22,7 +22,8 @@ def run_analyze(force: bool, lyrics_aware: bool) -> None:
         raise click.ClickException(f"Audio file not found: {audio_file}")
 
     out_path = song_analysis_path(root)
-    if out_path.exists() and not force:
+    has_existing = out_path.exists()
+    if has_existing and not force:
         raise click.ClickException(
             f"{out_path.relative_to(root)} already exists. Pass --force to regenerate "
             "(your manual edits will be lost)."
@@ -42,13 +43,22 @@ def run_analyze(force: bool, lyrics_aware: bool) -> None:
     try:
         analysis = analyze_audio(audio_file, project.audio_file)
     except Exception as e:
-        # librosa / audioread / soundfile failures bubble out as Python tracebacks
-        # without this. Common cases: corrupt WAV, missing ffmpeg for non-WAV
-        # formats, all-zero buffer crashing beat_track.
         raise click.ClickException(
             f"Audio analysis failed: {type(e).__name__}: {e}. "
             "Check the audio file is valid and ffmpeg is installed for non-WAV formats."
         ) from e
+
+    # If we're overwriting and the user has --force, show a diff and confirm
+    # before destroying their hand-edits (PRD §14.3).
+    if has_existing and force:
+        existing = load_song_analysis(root)
+        click.echo("")
+        click.echo("Changes to song-analysis.json:")
+        click.echo(_diff_analysis(existing, analysis))
+        if not click.confirm("Overwrite?", default=False):
+            click.echo("Aborted; existing analysis kept.")
+            return
+
     save_song_analysis(root, analysis)
     append_log(
         root,
@@ -62,6 +72,32 @@ def run_analyze(force: bool, lyrics_aware: bool) -> None:
         f"BPM {analysis.tempo_bpm}, "
         f"duration {analysis.duration_seconds:.1f}s."
     )
+
+
+def _diff_analysis(old, new) -> str:
+    """Compact human-readable diff between two SongAnalysis objects."""
+    lines: list[str] = []
+    if abs(old.tempo_bpm - new.tempo_bpm) > 0.01:
+        lines.append(f"  tempo: {old.tempo_bpm} → {new.tempo_bpm} BPM")
+    if abs(old.duration_seconds - new.duration_seconds) > 0.1:
+        lines.append(f"  duration: {old.duration_seconds:.1f}s → {new.duration_seconds:.1f}s")
+    old_names = {s.name: s for s in old.sections}
+    new_names = {s.name: s for s in new.sections}
+    removed = sorted(old_names.keys() - new_names.keys())
+    added = sorted(new_names.keys() - old_names.keys())
+    if removed:
+        lines.append(f"  removed sections: {', '.join(removed)}")
+    if added:
+        lines.append(f"  new sections: {', '.join(added)}")
+    for name in sorted(old_names.keys() & new_names.keys()):
+        a, b = old_names[name], new_names[name]
+        if abs(a.start - b.start) > 0.5 or abs(a.end - b.end) > 0.5:
+            lines.append(
+                f"  {name}: {a.start:.1f}-{a.end:.1f}s → {b.start:.1f}-{b.end:.1f}s"
+            )
+    if not lines:
+        lines.append("  (no significant changes)")
+    return "\n".join(lines)
 
 
 def run_sections() -> None:

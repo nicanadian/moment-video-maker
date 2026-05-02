@@ -177,6 +177,34 @@ def _pick_hook_clip(
     return low[0] if low else None
 
 
+def _pick_climax_clip(
+    pool: list[tuple[Scene, ClipTake]],
+    used_files: dict[str, int],
+    cfg: EditConfig,
+) -> tuple[Scene, ClipTake] | None:
+    """Highest-energy + highest-rated clip, used to lead a cold_hook moment.
+
+    The 'cold hook' pattern lands the chorus climax in the first 1.5s window
+    (the editor's finding) and then drops into the build, opposite of
+    tension_release which builds slow.
+    """
+    available = [
+        (scene, clip)
+        for scene, clip in pool
+        if used_files.get(clip.file, 0) < cfg.max_clip_reuse_count
+    ]
+    if not available:
+        return None
+    high = [
+        (scene, clip)
+        for scene, clip in available
+        if scene.energy_target in {"high", "mid-high"}
+    ]
+    if not high:
+        return None
+    return max(high, key=lambda sc: (sc[1].rating or 0))
+
+
 def pick_clips_for_section(
     pool: list[tuple[Scene, ClipTake]],
     section: Section,
@@ -210,15 +238,19 @@ def pick_clips_for_section(
     seen_scenes: set[str] = set()
 
     # tension_release: lead with a low-energy hook on high-energy sections.
-    if (
-        strategy == "tension_release"
-        and cfg.always_lead_with_hook
-        and energy_bucket(section.energy_avg) in {"mid-high", "high"}
-    ):
+    section_is_high = energy_bucket(section.energy_avg) in {"mid-high", "high"}
+    if strategy == "tension_release" and cfg.always_lead_with_hook and section_is_high:
         hook = _pick_hook_clip(pool, clip_use_count, cfg)
         if hook is not None:
             picked.append(hook)
             seen_scenes.add(hook[0].id)
+    elif strategy == "cold_hook" and section_is_high:
+        # Cold-hook: chorus climax frame leads. Drops into the build naturally
+        # because the diversity-by-scene pass picks lower-energy clips next.
+        climax = _pick_climax_clip(pool, clip_use_count, cfg)
+        if climax is not None:
+            picked.append(climax)
+            seen_scenes.add(climax[0].id)
 
     # First pass: prefer one clip per scene.
     for _score, scene, clip in scored:

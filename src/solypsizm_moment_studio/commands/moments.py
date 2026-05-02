@@ -222,6 +222,12 @@ def _try_play_audio_range(root, project, start: float, duration: float) -> None:
 
 
 def run_render_moment(moment_id: str) -> None:
+    """Print the spec path for the Variant Builder to pick up.
+
+    Until the Variant Builder ships there's no rendering pipeline to hand off
+    to, but the spec on disk is the artifact that downstream tool consumes.
+    Exit zero so the user can pipe the path into another command.
+    """
     root = require_project_root()
     moment = _resolve_moment(root, moment_id)
 
@@ -232,9 +238,10 @@ def run_render_moment(moment_id: str) -> None:
         )
 
     spec_path = root / "moments" / f"{moment.id}.json"
-    raise click.ClickException(
-        "Variant Builder integration is not wired yet. The moment spec is ready at "
-        f"{spec_path}; once Variant Builder ships, this command will hand it off."
+    click.echo(str(spec_path))
+    click.echo(
+        f"# {moment.id} ready for Variant Builder (not yet wired in v1).",
+        err=True,
     )
 
 
@@ -245,11 +252,12 @@ def run_render_all() -> None:
     if not approved:
         click.echo("No approved moments to render.")
         return
-    click.echo(f"{len(approved)} approved moment(s) waiting on Variant Builder:")
     for m in approved:
-        click.echo(f"  {m.id}")
-    raise click.ClickException(
-        "Variant Builder integration is not wired yet. Specs are ready in moments/."
+        click.echo(str(root / "moments" / f"{m.id}.json"))
+    click.echo(
+        f"# {len(approved)} approved moment(s) ready for Variant Builder "
+        "(not yet wired in v1).",
+        err=True,
     )
 
 

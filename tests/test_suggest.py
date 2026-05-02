@@ -423,6 +423,19 @@ def test_suggest_moments_returns_stop_reason_when_pool_too_small() -> None:
     assert reason is not None and "exhaust" in reason.lower() or "pool" in reason.lower() or "rating" in reason.lower()
 
 
+def test_cold_hook_leads_with_high_energy_clip_on_chorus() -> None:
+    """cold_hook lands the climax in the first 1.5s window — opposite of
+    tension_release which builds slow."""
+    cfg = EditConfig()
+    pool = [(s, s.clip_takes[0]) for s in _diverse_scene_pool()]
+    section = Section(name="chorus 1", start=33.0, end=55.0, energy_avg=0.78)
+    picks = pick_clips_for_section(pool, section, cfg, {}, "cold_hook")
+    first_scene = picks[0][0]
+    assert first_scene.energy_target in {"high", "mid-high"}, (
+        f"expected climax clip first for cold_hook, got {first_scene.energy_target}"
+    )
+
+
 def test_tension_release_leads_with_low_energy_clip_on_chorus() -> None:
     cfg = EditConfig()
     pool = [(s, s.clip_takes[0]) for s in _diverse_scene_pool()]
