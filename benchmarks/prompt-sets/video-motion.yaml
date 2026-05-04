@@ -1,0 +1,38 @@
+name: video-motion
+modality: video
+description: |
+  Canonical Solypsizm motion clip used to compare video-gen models. The
+  start_frame should be a winning artifact from the image-keyframe
+  benchmark (re-use across runs by passing --start-frame).
+reference: character-reference/front.png
+duration_seconds: 6.0
+prompt: |
+  Subject: Anime cel-shaded young man with a glowing horizontal cyan LED visor
+  (single strip, no frame), grey bomber jacket with cyan/violet hexagonal neon piping,
+  black tee, dark grey slim pants with side-seam piping, black combat boots.
+
+  Action: character walks forward at a steady brisk pace, three full strides over
+  six seconds; jacket sways slightly with motion; neon piping glow pulses subtly
+  with each step.
+
+  Environment: foggy field at pre-dawn, distant watchtower silhouette ahead,
+  deep purple sky transitioning to amber on horizon. Light ground fog drifts
+  left to right slowly.
+
+  Lighting: horizon backlight, character mostly silhouette with cyan visor glow
+  punching through the fog.
+
+  Camera: locked low-angle wide shot. NO zoom, NO dolly in this take.
+
+  Aspect: vertical 9:16, 1080x1920.
+  Duration: 6 seconds, continuous take, no cuts.
+  Audio: silent video — no music, no dialogue, no foley, no SFX.
+  Style: cinematic anime, 24fps cel-shaded animation.
+
+  Avoid:
+  - no slow motion
+  - no morphing
+  - no distorted face
+  - no text
+  - no watermark
+  - no Veo watermark

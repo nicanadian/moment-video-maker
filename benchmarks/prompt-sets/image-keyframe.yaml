@@ -1,0 +1,31 @@
+name: image-keyframe
+modality: image
+description: |
+  Canonical Solypsizm scene used to compare image-gen models head-to-head.
+  Focuses on the most-stressed brand elements (visor, jacket piping) plus
+  a typical Haze environment to surface aesthetic-match differences.
+reference: character-reference/front.png
+size: "1024x1792"
+prompt: |
+  Generate a vertical 1080x1920 anime-style cel-shaded illustration.
+
+  Character (preserve exactly per the locked spec — match the uploaded reference image):
+  Anime cel-shaded young man with a glowing horizontal cyan LED visor (single thin strip,
+  NO frame above or below — NOT goggles, NOT sunglasses, NOT a helmet visor),
+  grey bomber jacket with cyan AND violet neon piping in angular HEXAGONAL patterns
+  (NOT zigzag, NOT racing stripes), black tee, dark grey slim pants with cyan+violet
+  side-seam piping, black mid-ankle combat boots.
+
+  Scene: foggy field at pre-dawn. Distant abandoned watchtower silhouette on the horizon.
+  Deep purple sky transitioning to amber on the horizon line. Scattered stars above.
+  Light fog rolling across the ground.
+
+  Camera: wide shot, low angle, locked off. Character standing center-frame, back to
+  camera, looking at the tower.
+
+  Lighting: horizon backlight rim-lights the character. Visor self-illuminates cyan.
+  Ground fog catches violet light.
+
+  Mood: cinematic, moody, neon-lit. Crushed blacks. Cyan and violet rim lighting.
+
+  No text in the image. No logos or watermarks.

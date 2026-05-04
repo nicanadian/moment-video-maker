@@ -5,6 +5,7 @@ import click
 from solypsizm_moment_studio import __version__
 from solypsizm_moment_studio.commands import api as cmd_api
 from solypsizm_moment_studio.commands import audio as cmd_audio
+from solypsizm_moment_studio.commands import benchmark as cmd_benchmark
 from solypsizm_moment_studio.commands import brand_kit as cmd_brand_kit
 from solypsizm_moment_studio.commands import concepts as cmd_concepts
 from solypsizm_moment_studio.commands import diagnostic as cmd_diagnostic
@@ -216,6 +217,20 @@ def secrets_set_cmd(provider: str) -> None:
 @click.argument("provider", type=click.Choice(["gemini", "openrouter", "openai"]))
 def secrets_remove_cmd(provider: str) -> None:
     cmd_api.run_secrets_remove(provider)
+
+
+@main.command("benchmark", help="Run an image/video model benchmark with VLM-judge scoring.")
+@click.argument("prompt_set")
+@click.option("--model", "models", multiple=True, required=True,
+              help="Model spec, e.g. gemini:imagen-4 (repeatable).")
+@click.option("--takes", default=1, show_default=True, type=int,
+              help="Independent generations per model (independent seeds).")
+@click.option("--judge", default="gemini-2.5-flash", show_default=True,
+              help="Gemini model to use for scoring.")
+@click.option("--budget", type=float, default=None,
+              help="Per-run cost cap in USD (independent of daily cap).")
+def benchmark_cmd(prompt_set: str, models: tuple[str, ...], takes: int, judge: str, budget: float | None) -> None:
+    cmd_benchmark.run_benchmark(prompt_set, models, takes, judge, budget)
 
 
 @main.command("budget", help="Show today's API spend against the daily cap.")
