@@ -5,6 +5,7 @@ import click
 from solypsizm_moment_studio import __version__
 from solypsizm_moment_studio.commands import api as cmd_api
 from solypsizm_moment_studio.commands import audio as cmd_audio
+from solypsizm_moment_studio.commands import auto as cmd_auto
 from solypsizm_moment_studio.commands import benchmark as cmd_benchmark
 from solypsizm_moment_studio.commands import brand_kit as cmd_brand_kit
 from solypsizm_moment_studio.commands import concepts as cmd_concepts
@@ -107,8 +108,10 @@ def pick_scene_cmd(scene_id: str) -> None:
 
 @main.command("scenes", help="Emit ChatGPT scene-breakdown prompt for the current concept.")
 @click.option("--copy/--no-copy", default=True)
-def scenes_cmd(copy: bool) -> None:
-    cmd_scenes.run_scenes(copy)
+@click.option("--api", is_flag=True, help="Run the API call directly instead of paste-back.")
+@click.option("--model", help="Override the default text model.")
+def scenes_cmd(copy: bool, api: bool, model: str | None) -> None:
+    cmd_scenes.run_scenes(copy, api, model)
 
 
 @main.command("import-scenes")
@@ -125,8 +128,14 @@ def list_scenes_cmd() -> None:
 @main.command("prompts", help="Emit the 3 ready-to-paste prompts for a scene (current if omitted).")
 @click.argument("scene_id", required=False)
 @click.option("--copy/--no-copy", default=False, help="Step through prompts via clipboard.")
-def prompts_cmd(scene_id: str | None, copy: bool) -> None:
-    cmd_scenes.run_prompts(scene_id, copy)
+@click.option("--api", is_flag=True, help="Generate frames + motion directly via providers.")
+@click.option("--image-model", help="Override the default image model.")
+@click.option("--video-model", help="Override the default video model.")
+def prompts_cmd(
+    scene_id: str | None, copy: bool, api: bool,
+    image_model: str | None, video_model: str | None,
+) -> None:
+    cmd_scenes.run_prompts(scene_id, copy, api, image_model, video_model)
 
 
 # --- Frames and clips -------------------------------------------------------
@@ -217,6 +226,38 @@ def secrets_set_cmd(provider: str) -> None:
 @click.argument("provider", type=click.Choice(["gemini", "openrouter", "openai"]))
 def secrets_remove_cmd(provider: str) -> None:
     cmd_api.run_secrets_remove(provider)
+
+
+@main.command("auto", help="Autonomous pipeline: song → 9 reviewable moments.")
+@click.option("--moments", default=9, show_default=True, type=int)
+@click.option("--review-gates", default="concept,final", show_default=True,
+              help="Comma-separated stages that pause for review (or 'none').")
+@click.option("--threshold", default=32.0, show_default=True, type=float,
+              help="Auto-approve score (0-40).")
+@click.option("--budget", default=30.0, show_default=True, type=float,
+              help="Per-run cap (independent of daily cap).")
+@click.option("--text-model", default="gemini:gemini-2.5-flash", show_default=True)
+@click.option("--image-model", default="openai:gpt-image-1", show_default=True)
+@click.option("--video-model", default="gemini:veo-3", show_default=True)
+@click.option("--reset", is_flag=True, help="Wipe any existing pipeline state and start over.")
+def auto_cmd(
+    moments: int, review_gates: str, threshold: float, budget: float,
+    text_model: str, image_model: str, video_model: str, reset: bool,
+) -> None:
+    cmd_auto.run_auto_cmd(
+        moments, review_gates, threshold, budget,
+        text_model, image_model, video_model, reset,
+    )
+
+
+@main.command("auto-resume", help="Continue a paused / interrupted auto-pipeline.")
+def auto_resume_cmd() -> None:
+    cmd_auto.run_auto_resume_cmd()
+
+
+@main.command("auto-status", help="Show auto-pipeline state for the current project.")
+def auto_status_cmd() -> None:
+    cmd_auto.run_auto_status_cmd()
 
 
 @main.command("benchmark", help="Run an image/video model benchmark with VLM-judge scoring.")

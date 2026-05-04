@@ -1,6 +1,12 @@
 # v2: Multi-provider API mode + benchmark harness + auto-pipeline
 
-**Status:** draft (planning)
+**Status:** Phases E + F + G code-complete (live SDK validation pending real first run)
+
+## Progress log
+
+- **2026-05-04** — Phase E foundation landed: provider protocols, three adapters (OpenAI / Gemini / OpenRouter), $40/day budget guard with persisted ledger, per-project idempotent cache, secrets layer (OAuth for OpenAI, keys for Gemini/OpenRouter), `--api` flag on `brainstorm`. 76/76 tests.
+- **2026-05-04** — Phase F landed: VLM-judge in `judge.py` (Gemini Flash vision-call, 4-dim rubric, weighted 0-40 score), `benchmark.py` orchestrator with PromptSet YAML-ish loader + cost estimator, `solypsizm benchmark` command, two canonical prompt-sets (image-keyframe + video-motion). 84/84 tests.
+- **2026-05-04** — Phase G landed: `--api` wiring on `scenes` and `prompts` (start frame → end frame → motion clip → import), auto-pipeline state machine in `auto.py` with persisted state at `.state/auto-state.json`, `solypsizm auto / auto-resume / auto-status` commands, idempotent stage transitions (resume picks up where it left off after Ctrl+C / pause / next-day budget reset). 94/94 tests.
 **Owner:** Nic
 **Started:** 2026-05-04
 **Predecessor:** `docs/projects/02-phase-d-hardening.md` (v1 ships first)
