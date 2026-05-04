@@ -20,7 +20,8 @@ audio = [
     "pydub>=0.25",
 ]
 api = [
-    "openai>=1.30",
+    "openai>=1.30,<3",
+    "google-genai>=0.3",
 ]
 dev = [
     "pytest>=8.0",

@@ -3,6 +3,7 @@ import os
 import click
 
 from solypsizm_moment_studio import __version__
+from solypsizm_moment_studio.commands import api as cmd_api
 from solypsizm_moment_studio.commands import audio as cmd_audio
 from solypsizm_moment_studio.commands import brand_kit as cmd_brand_kit
 from solypsizm_moment_studio.commands import concepts as cmd_concepts
@@ -64,8 +65,10 @@ def bootstrap_brand_kit_cmd(source: str | None, out: str | None, force: bool) ->
 @main.command("brainstorm", help="Emit a ChatGPT brainstorm prompt for the current project.")
 @click.option("--count", default=5, show_default=True)
 @click.option("--copy/--no-copy", default=True)
-def brainstorm_cmd(count: int, copy: bool) -> None:
-    cmd_concepts.run_brainstorm(count, copy)
+@click.option("--api", is_flag=True, help="Run the API call directly instead of paste-back.")
+@click.option("--model", help="Override the default text model (e.g. openrouter:openai/gpt-5).")
+def brainstorm_cmd(count: int, copy: bool, api: bool, model: str | None) -> None:
+    cmd_concepts.run_brainstorm(count, copy, api, model)
 
 
 @main.command("import-concepts", help="Parse a ChatGPT brainstorm response into concept JSONs.")
@@ -180,6 +183,50 @@ def analyze_cmd(force: bool) -> None:
 @main.command("sections", help="Print the detected sections table.")
 def sections_cmd() -> None:
     cmd_audio.run_sections()
+
+
+# --- Diagnostics ------------------------------------------------------------
+
+# --- API mode (v2) ----------------------------------------------------------
+
+@main.group("secrets", help="Manage provider credentials (OpenAI / Gemini / OpenRouter).")
+def secrets_group() -> None:
+    pass
+
+
+@secrets_group.command("status")
+def secrets_status_cmd() -> None:
+    cmd_api.run_secrets_status()
+
+
+@secrets_group.command("login", help="OAuth login (currently only OpenAI).")
+@click.argument("provider", type=click.Choice(["openai"]))
+def secrets_login_cmd(provider: str) -> None:
+    if provider == "openai":
+        cmd_api.run_secrets_login_openai()
+
+
+@secrets_group.command("set", help="Set an API key for a provider.")
+@click.argument("provider", type=click.Choice(["gemini", "openrouter", "openai"]))
+def secrets_set_cmd(provider: str) -> None:
+    cmd_api.run_secrets_set(provider)
+
+
+@secrets_group.command("remove", help="Remove a stored API key.")
+@click.argument("provider", type=click.Choice(["gemini", "openrouter", "openai"]))
+def secrets_remove_cmd(provider: str) -> None:
+    cmd_api.run_secrets_remove(provider)
+
+
+@main.command("budget", help="Show today's API spend against the daily cap.")
+def budget_cmd() -> None:
+    cmd_api.run_budget_show()
+
+
+@main.command("cache-prune", help="Drop cached API artifacts older than N days (per-project).")
+@click.option("--older-than", default=30, show_default=True, type=int)
+def cache_prune_cmd(older_than: int) -> None:
+    cmd_api.run_cache_prune(older_than)
 
 
 # --- Diagnostics ------------------------------------------------------------

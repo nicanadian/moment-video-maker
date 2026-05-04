@@ -45,13 +45,57 @@ def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
     return root, bk, project
 
 
-def run_brainstorm(count: int, copy: bool) -> None:
+def run_brainstorm(count: int, copy: bool, api: bool, model: str | None) -> None:
     root, bk, project = _load_context()
     lyrics_path = root / project.lyrics_file
     if not lyrics_path.is_file():
         raise click.ClickException(f"Missing {lyrics_path}.")
     lyrics = lyrics_path.read_text(encoding="utf-8")
     prompt = brainstorm_prompt(bk, project, lyrics, count=count)
+
+    if api:
+        # Direct provider call. Skip clipboard / paste-back; auto-import.
+        from solypsizm_moment_studio.providers import dispatch, registry
+        from solypsizm_moment_studio.providers.exceptions import (
+            BudgetExceeded,
+            ProviderError,
+        )
+
+        spec = model or registry.DEFAULT_TEXT
+        click.echo(f"Calling {spec}...", err=True)
+        try:
+            result = dispatch.call_text(
+                root,
+                spec,
+                system="You are a creative director helping brainstorm music video concepts. "
+                "Reply with strict JSON only — no markdown fences, no prose.",
+                user=prompt,
+            )
+        except BudgetExceeded as e:
+            raise click.ClickException(str(e)) from e
+        except ProviderError as e:
+            raise click.ClickException(f"Provider call failed: {e}") from e
+
+        cache_marker = " [cache]" if result.cache_hit else ""
+        click.echo(
+            f"✓ {spec}{cache_marker}: {result.latency_ms}ms, ${result.cost_usd:.4f}",
+            err=True,
+        )
+        # Hand off to the same parser the manual flow uses.
+        try:
+            items = parse_concepts_response(result.text)
+        except ParseError as e:
+            last_import = root / ".state" / "last-import.txt"
+            last_import.parent.mkdir(parents=True, exist_ok=True)
+            last_import.write_text(result.text, encoding="utf-8")
+            raise click.ClickException(
+                f"API response didn't parse: {e}. Raw saved to {last_import}."
+            ) from e
+
+        _persist_concepts(root, project, items, source="api")
+        append_log(root, "brainstorm_api", count=count, model=spec, cache=result.cache_hit)
+        return
+
     click.echo(prompt)
     if copy:
         if clipboard_copy(prompt):
@@ -59,6 +103,35 @@ def run_brainstorm(count: int, copy: bool) -> None:
         else:
             click.echo("\n— pbcopy unavailable; prompt printed above only —", err=True)
     append_log(root, "brainstorm_emitted", count=count)
+
+
+def _persist_concepts(root, project, items, source: str) -> None:
+    """Shared body for `import-concepts` and `brainstorm --api` paths."""
+    next_idx = _next_concept_index(root)
+    created: list[str] = []
+    for offset, raw in enumerate(items):
+        idx = next_idx + offset
+        title_raw = str(raw.get("title", "")).strip()
+        title = title_raw or f"Concept {idx}"
+        concept_id = f"concept-{idx:02d}-{slugify(title, max_words=4, fallback='untitled')}"
+        concept = Concept(
+            id=concept_id,
+            title=title,
+            summary=str(raw.get("summary", "")),
+            song_themes_referenced=coerce_str_list(raw.get("song_themes_referenced")),
+            brand_alignment_notes=str(raw.get("brand_alignment_notes", "")),
+            estimated_runtime_seconds=int(raw.get("estimated_runtime_seconds", 22) or 22),
+            scene_count=int(raw.get("scene_count", 4) or 4),
+        )
+        save_concept(root, concept)
+        created.append(concept_id)
+
+    project.concepts = sorted(set(project.concepts) | set(created))
+    save_project(root, project)
+    append_log(root, "concepts_imported", count=len(created), ids=created, source=source)
+    click.echo(f"✓ Imported {len(created)} concepts:")
+    for cid in created:
+        click.echo(f"  {cid}")
 
 
 def _next_concept_index(root: Path) -> int:
@@ -79,34 +152,7 @@ def run_import_concepts(input_file) -> None:
             f"Could not parse response: {e}. Raw input saved to {last_import}."
         ) from e
 
-    next_idx = _next_concept_index(root)
-    created: list[str] = []
-    for offset, raw in enumerate(items):
-        idx = next_idx + offset
-        # Preserve the artist's display title verbatim (even unicode-only) and
-        # only fall back the slug when slugify would yield empty.
-        title_raw = str(raw.get("title", "")).strip()
-        title = title_raw or f"Concept {idx}"
-        concept_id = f"concept-{idx:02d}-{slugify(title, max_words=4, fallback='untitled')}"
-        concept = Concept(
-            id=concept_id,
-            title=title,
-            summary=str(raw.get("summary", "")),
-            song_themes_referenced=coerce_str_list(raw.get("song_themes_referenced")),
-            brand_alignment_notes=str(raw.get("brand_alignment_notes", "")),
-            estimated_runtime_seconds=int(raw.get("estimated_runtime_seconds", 22) or 22),
-            scene_count=int(raw.get("scene_count", 4) or 4),
-        )
-        save_concept(root, concept)
-        created.append(concept_id)
-
-    project.concepts = sorted(set(project.concepts) | set(created))
-    save_project(root, project)
-    append_log(root, "concepts_imported", count=len(created), ids=created)
-
-    click.echo(f"✓ Imported {len(created)} concepts:")
-    for cid in created:
-        click.echo(f"  {cid}")
+    _persist_concepts(root, project, items, source="paste")
 
 
 def run_list_concepts() -> None:
