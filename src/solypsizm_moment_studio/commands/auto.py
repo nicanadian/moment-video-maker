@@ -23,6 +23,7 @@ def run_auto_cmd(
     image_model: str,
     video_model: str,
     reset: bool,
+    dry_run: bool = False,
 ) -> None:
     root = require_project_root()
     if reset:
@@ -42,6 +43,16 @@ def run_auto_cmd(
         image_model=image_model,
         video_model=video_model,
     )
+    if dry_run:
+        click.echo("DRY RUN: auto-pipeline plan only; no state or provider calls.")
+        click.echo(f"Project root: {root}")
+        click.echo(f"Target moments: {config.target_moments}")
+        click.echo(f"Review gates: {config.review_gates or ['none']}")
+        click.echo(f"Text model: {config.text_model}")
+        click.echo(f"Image model: {config.image_model}")
+        click.echo(f"Video model: {config.video_model}")
+        click.echo(f"Budget: ${config.budget_usd:.2f}")
+        return
     run_auto(root, config)
 
 

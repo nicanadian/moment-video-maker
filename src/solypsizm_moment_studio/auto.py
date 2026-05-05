@@ -15,8 +15,6 @@ exit; the user runs `solypsizm auto resume <slug>` to continue.
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -27,7 +25,6 @@ from solypsizm_moment_studio.state import (
     append_log,
     list_concepts,
     list_scenes,
-    load_concept,
     load_project,
     save_project,
 )
@@ -87,6 +84,7 @@ def load_state(project_root: Path) -> AutoState | None:
 
 def save_state(project_root: Path, state: AutoState) -> None:
     from solypsizm_moment_studio.state import save_json_atomic
+
     save_json_atomic(state_path(project_root), state.model_dump())
 
 
@@ -108,9 +106,7 @@ def _pause(project_root: Path, state: AutoState, reason: str) -> None:
     save_state(project_root, state)
     click.echo("")
     click.echo(f"⏸  paused: {reason}")
-    click.echo(
-        f"   resume with `solypsizm --project {state.project_slug} auto-resume`"
-    )
+    click.echo(f"   resume with `solypsizm --project {state.project_slug} auto-resume`")
 
 
 def run_auto(project_root: Path, config: AutoConfig) -> None:
@@ -298,8 +294,11 @@ def _stage_media(project_root: Path, state: AutoState, cfg: AutoConfig, project)
         state.current_scene_id = scene.id
         save_state(project_root, state)
         cmd_scenes.run_prompts(
-            scene_id=scene.id, copy=False,
-            api=True, image_model=cfg.image_model, video_model=cfg.video_model,
+            scene_id=scene.id,
+            copy=False,
+            api=True,
+            image_model=cfg.image_model,
+            video_model=cfg.video_model,
         )
         state.completed_scene_ids.append(scene.id)
         state.current_scene_id = None

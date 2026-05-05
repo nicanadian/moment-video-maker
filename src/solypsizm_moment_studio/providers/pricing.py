@@ -20,8 +20,10 @@ def _load_table() -> dict[str, Any]:
     override = os.environ.get("SOLYPSIZM_PRICING")
     if override:
         return json.loads(Path(override).read_text(encoding="utf-8"))
-    raw = files("solypsizm_moment_studio.providers").joinpath("pricing.json").read_text(
-        encoding="utf-8"
+    raw = (
+        files("solypsizm_moment_studio.providers")
+        .joinpath("pricing.json")
+        .read_text(encoding="utf-8")
     )
     return json.loads(raw)
 
@@ -34,10 +36,9 @@ def text_cost(model_key: str, input_tokens: int, output_tokens: int) -> float:
     row = table.get(model_key)
     if not row:
         return 0.0
-    return (
-        input_tokens / 1_000_000 * row.get("input_per_1m", 0.0)
-        + output_tokens / 1_000_000 * row.get("output_per_1m", 0.0)
-    )
+    return input_tokens / 1_000_000 * row.get(
+        "input_per_1m", 0.0
+    ) + output_tokens / 1_000_000 * row.get("output_per_1m", 0.0)
 
 
 def image_cost(model_key: str) -> float:

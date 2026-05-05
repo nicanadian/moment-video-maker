@@ -6,7 +6,8 @@ from pathlib import Path
 
 import click
 
-from solypsizm_moment_studio.benchmark import load_prompt_set, run
+from solypsizm_moment_studio.benchmark import estimate_cost, load_prompt_set, run
+from solypsizm_moment_studio.providers.exceptions import ProviderError
 
 
 def run_benchmark(
@@ -15,11 +16,11 @@ def run_benchmark(
     takes: int,
     judge: str,
     budget: float | None,
+    dry_run: bool = False,
 ) -> None:
     if not models:
         raise click.ClickException(
-            "Pass at least one --model. Example: "
-            "--model gemini:imagen-4 --model openai:gpt-image-1"
+            "Pass at least one --model. Example: --model gemini:imagen-4 --model openai:gpt-image-1"
         )
 
     repo_prompt_dir = Path(__file__).parent.parent.parent.parent / "benchmarks" / "prompt-sets"
@@ -36,15 +37,26 @@ def run_benchmark(
         click.echo(f"  budget: ${budget:.2f}")
     click.echo("")
 
-    out_dir = run(
-        prompt_set=prompt_set,
-        specs=list(models),
-        takes=takes,
-        judge_model=judge,
-        budget_usd=budget,
-    )
+    if dry_run:
+        est = estimate_cost(list(models), takes, prompt_set)
+        click.echo("DRY RUN: no provider calls will be made.")
+        click.echo(f"Estimated cost: ${est:.4f}")
+        if budget is not None and est > budget:
+            click.echo(f"Would exceed budget: ${budget:.2f}")
+        return
+
+    try:
+        out_dir = run(
+            prompt_set=prompt_set,
+            specs=list(models),
+            takes=takes,
+            judge_model=judge,
+            budget_usd=budget,
+        )
+    except ProviderError as e:
+        raise click.ClickException(str(e)) from e
 
     click.echo(f"\n✓ Run complete: {out_dir}")
-    click.echo(f"  manifest.json + report.md + per-spec artifacts")
-    click.echo(f"\n--- report.md ---\n")
+    click.echo("  manifest.json + report.md + per-spec artifacts")
+    click.echo("\n--- report.md ---\n")
     click.echo((out_dir / "report.md").read_text(encoding="utf-8"))

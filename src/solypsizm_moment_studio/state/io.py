@@ -119,7 +119,9 @@ def list_scenes(root: Path, concept_id: str | None = None) -> list[Scene]:
         return []
     paths: list[Path] = []
     if concept_id is not None:
-        paths = sorted((folder / concept_id).glob("*.json")) if (folder / concept_id).is_dir() else []
+        paths = (
+            sorted((folder / concept_id).glob("*.json")) if (folder / concept_id).is_dir() else []
+        )
     else:
         for sub in sorted(folder.iterdir()):
             if sub.is_dir():

@@ -152,6 +152,7 @@ def prune(project_root: Path, *, older_than_days: int = 30) -> int:
     """Drop cached artifacts older than ``older_than_days``. Returns number
     of files removed."""
     import time
+
     folder = cache_dir(project_root)
     if not folder.is_dir():
         return 0

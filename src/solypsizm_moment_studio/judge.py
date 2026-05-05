@@ -12,11 +12,12 @@ We can promote vision to a protocol method later if other providers join.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from solypsizm_moment_studio.models import BrandKit
 from solypsizm_moment_studio.providers import cost, secrets
@@ -51,7 +52,9 @@ class JudgeScore(BaseModel):
 
 def _build_image_judge_prompt(brand_kit: BrandKit, prompt_used: str) -> str:
     char = brand_kit.character
-    return f"""You are scoring an AI-generated image for the Solypsizm music video brand. The brand has a STRICT locked character (visor, jacket piping, etc.) and aesthetic. Failures to preserve them are common and should score zero.
+    return f"""You are scoring an AI-generated image for the Solypsizm music video brand.
+The brand has a STRICT locked character (visor, jacket piping, etc.) and aesthetic.
+Failures to preserve them are common and should score zero.
 
 LOCKED CHARACTER (the avatar in image 1 is the canonical reference):
 - Visor: {char.visor}
@@ -62,7 +65,7 @@ LOCKED CHARACTER (the avatar in image 1 is the canonical reference):
 
 AESTHETIC:
 - Palette: cyan #00D4FF (dominant), violet #8A2BE2, brand purple #5B2A86, crushed blacks
-- Color grade: {' '.join(brand_kit.aesthetic.color_grade)}
+- Color grade: {" ".join(brand_kit.aesthetic.color_grade)}
 - Lighting: {brand_kit.aesthetic.lighting_cues}
 
 The model was asked to generate:
@@ -73,10 +76,18 @@ Two images are attached:
 2. The GENERATED artifact to score.
 
 Score the generated artifact (image 2) on these dimensions, 0-10 each:
-- character_fidelity: does the character match the reference? Visor as a single horizontal cyan strip (NOT goggles, NOT sunglasses, NOT a helmet visor)? Jacket with hexagonal cyan+violet piping (NOT zigzag, NOT racing stripes)? Pants with side-seam piping? Combat boots? Score 0 if a different character, 10 if visually indistinguishable from reference.
-- prompt_fidelity: does the scene match the prompt above? Score 0 if it generated something else entirely, 10 if every prompt element is present.
-- aesthetic_match: cel-shaded anime (NOT photoreal)? Cyan+violet palette? Crushed blacks + neon rim lighting? Score 0 if photoreal or wrong palette, 10 if perfectly on-brand.
-- quality: composition, sharp linework, no artifacts, no text/watermarks? Score 0 if visibly broken, 10 if professionally clean.
+- character_fidelity: does the character match the reference? Visor as a single horizontal
+  cyan strip (NOT goggles, NOT sunglasses, NOT a helmet visor)? Jacket with hexagonal
+  cyan+violet piping (NOT zigzag, NOT racing stripes)? Pants with side-seam piping?
+  Combat boots? Score 0 if a different character, 10 if visually indistinguishable
+  from reference.
+- prompt_fidelity: does the scene match the prompt above? Score 0 if it generated
+  something else entirely, 10 if every prompt element is present.
+- aesthetic_match: cel-shaded anime (NOT photoreal)? Cyan+violet palette? Crushed
+  blacks + neon rim lighting? Score 0 if photoreal or wrong palette, 10 if perfectly
+  on-brand.
+- quality: composition, sharp linework, no artifacts, no text/watermarks? Score 0 if
+  visibly broken, 10 if professionally clean.
 
 Reply with STRICT JSON only — no markdown fences, no prose:
 {{
@@ -99,7 +110,10 @@ def _build_video_judge_prompt(brand_kit: BrandKit, prompt_used: str) -> str:
         "Score the generated motion clip (image 2 is a thumbnail from the clip)",
     ).replace(
         "no text/watermarks?",
-        "no text/watermarks? Veo clips frequently have a Veo watermark — penalize heavily if visible.",
+        (
+            "no text/watermarks? Veo clips frequently have a Veo watermark — "
+            "penalize heavily if visible."
+        ),
     )
 
 
@@ -147,10 +161,8 @@ def judge_video(
             model=model,
         )
     finally:
-        try:
+        with contextlib.suppress(OSError):
             thumb.unlink()
-        except OSError:
-            pass
 
 
 def _extract_thumbnail(video_path: Path) -> Path | None:
@@ -186,9 +198,7 @@ def _judge_with_gemini(
 ) -> JudgeScore:
     api_key = secrets.gemini_credential()
     if not api_key:
-        raise ProviderUnavailable(
-            "GEMINI_API_KEY not set. Run `solypsizm secrets set gemini`."
-        )
+        raise ProviderUnavailable("GEMINI_API_KEY not set. Run `solypsizm secrets set gemini`.")
     try:
         from google import genai
         from google.genai import types as genai_types
@@ -238,6 +248,7 @@ def _judge_with_gemini(
     in_tokens = getattr(usage, "prompt_token_count", 0) if usage else 0
     out_tokens = getattr(usage, "candidates_token_count", 0) if usage else 0
     from solypsizm_moment_studio.providers import pricing
+
     cost_usd = pricing.text_cost(f"gemini/{model}", in_tokens, out_tokens) or 0.001
     cost.record(cost_usd, model=f"gemini:{model}", kind=f"judge-{kind}", latency_ms=latency_ms)
 

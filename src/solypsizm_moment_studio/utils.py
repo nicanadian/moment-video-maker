@@ -1,11 +1,11 @@
 import re
 import shutil
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 _slug_re = re.compile(r"[^a-z0-9]+")
@@ -59,8 +59,7 @@ def resolve_id(query: str, candidates: list[str], kind: str = "id") -> str:
         return substring[0]
     if len(substring) > 1:
         raise ValueError(
-            f"{query!r} is ambiguous; matches {len(substring)} {kind}(s): "
-            + ", ".join(substring)
+            f"{query!r} is ambiguous; matches {len(substring)} {kind}(s): " + ", ".join(substring)
         )
     raise ValueError(f"No {kind} matches {query!r}.")
 

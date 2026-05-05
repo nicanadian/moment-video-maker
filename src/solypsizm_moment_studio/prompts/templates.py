@@ -53,7 +53,8 @@ def brainstorm_prompt(bk: BrandKit, project: Project, lyrics: str, count: int = 
     Asks for `count` distinct concepts as parseable JSON.
     """
     theme_block = _song_theme_block(bk, project.song_slug)
-    return f"""You are helping {bk.artist} brainstorm short-form ("moment") video concepts for the song below.
+    return f"""You are helping {bk.artist} brainstorm short-form ("moment") video
+concepts for the song below.
 
 # Song
 Title: {project.song_title}
@@ -71,7 +72,9 @@ Artist: {bk.artist}
 {theme_block}
 
 # Task
-Propose {count} DISTINCT concepts for moment videos based on this song. Each concept is a thematic idea (e.g. "abandoned watchtower at dawn") that will be broken into 2-5 scenes later.
+Propose {count} DISTINCT concepts for moment videos based on this song. Each concept is
+a thematic idea (e.g. "abandoned watchtower at dawn") that will be broken into 2-5
+scenes later.
 
 For each concept, return a JSON object with these fields:
 - "title": short, evocative
@@ -81,7 +84,8 @@ For each concept, return a JSON object with these fields:
 - "estimated_runtime_seconds": integer, 15-45
 - "scene_count": integer, 2-5
 
-Return ONLY a JSON array of {count} concept objects. No prose before or after. No markdown. No code fences.
+Return ONLY a JSON array of {count} concept objects. No prose before or after.
+No markdown. No code fences.
 """
 
 
@@ -96,7 +100,8 @@ def scenes_prompt(bk: BrandKit, project: Project, concept: Concept) -> str:
         f"Target runtime: {concept.estimated_runtime_seconds}s\n"
         f"Target scene count: {concept.scene_count}"
     )
-    return f"""You are breaking the concept below into {concept.scene_count} scenes for short-form moment videos.
+    return f"""You are breaking the concept below into {concept.scene_count} scenes for
+short-form moment videos.
 
 # Locked character spec
 {_character_block(bk)}
@@ -110,7 +115,9 @@ def scenes_prompt(bk: BrandKit, project: Project, concept: Concept) -> str:
 {concept_block}
 
 # Task
-Return a JSON array of EXACTLY {concept.scene_count} scene objects. Each scene is a single shot: one start frame, one end frame, one continuous camera motion (Veo 3 takes ~4-6 second clips).
+Return a JSON array of EXACTLY {concept.scene_count} scene objects. Each scene is a
+single shot: one start frame, one end frame, one continuous camera motion (Veo 3 takes
+~4-6 second clips).
 
 Each scene object must include:
 - "title": short
@@ -122,7 +129,8 @@ Each scene object must include:
 - "environment": where this happens, evocatively
 - "lighting": how it's lit (mention rim lighting / neon if applicable)
 - "mood_tags": 2-4 short tags ("isolation", "approach", "release", etc.)
-- "song_section_fit": which section(s) of the song this scene fits ("intro", "verse 1", "pre-chorus", "chorus 1", "bridge", "outro")
+- "song_section_fit": which section(s) of the song this scene fits ("intro",
+  "verse 1", "pre-chorus", "chorus 1", "bridge", "outro")
 - "energy_target": one of "low", "low-mid", "mid", "mid-high", "high"
 
 Return ONLY the JSON array. No prose. No code fences.

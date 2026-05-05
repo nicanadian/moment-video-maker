@@ -22,9 +22,8 @@ from solypsizm_moment_studio.suggest import suggest_moments
 from solypsizm_moment_studio.utils import resolve_id
 
 
-def _resolve_moment(root, moment_id: str) -> "Moment":  # noqa: F821
+def _resolve_moment(root, moment_id: str) -> Moment:  # noqa: F821
     """Look up a moment by ID with prefix / substring fallback."""
-    from solypsizm_moment_studio.state import load_moment
     candidates = [m.id for m in list_moments(root)]
     try:
         resolved = resolve_id(moment_id, candidates, kind="moment")
@@ -120,9 +119,7 @@ def run_list_moments() -> None:
     click.echo("-" * 80)
     for m in moments:
         clip_count = sum(1 for s in m.segments if s.type == "clip")
-        click.echo(
-            f"{m.id:<40} {m.status:<16} {m.source_song_section.name:<14} {clip_count}"
-        )
+        click.echo(f"{m.id:<40} {m.status:<16} {m.source_song_section.name:<14} {clip_count}")
 
 
 def run_review_moment(moment_id: str, approve: bool, reject: bool) -> None:
@@ -256,8 +253,7 @@ def run_render_all() -> None:
     for m in approved:
         click.echo(str(root / "moments" / f"{m.id}.json"))
     click.echo(
-        f"# {len(approved)} approved moment(s) ready for Variant Builder "
-        "(not yet wired in v1).",
+        f"# {len(approved)} approved moment(s) ready for Variant Builder (not yet wired in v1).",
         err=True,
     )
 

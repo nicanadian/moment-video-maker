@@ -75,8 +75,6 @@ def run_budget_show() -> None:
 def run_cache_prune(older_than_days: int) -> None:
     root = find_project_root()
     if root is None:
-        raise click.ClickException(
-            "Run from inside a project. Cache is per-project."
-        )
+        raise click.ClickException("Run from inside a project. Cache is per-project.")
     removed = _cache.prune(root, older_than_days=older_than_days)
     click.echo(f"✓ Pruned {removed} cached artifact(s) older than {older_than_days} day(s).")

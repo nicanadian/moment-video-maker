@@ -12,11 +12,11 @@ from solypsizm_moment_studio.analysis import label_sections
 
 def test_intro_outro_chosen_when_low_energy_at_ends() -> None:
     raw = [
-        (0.0, 8.0, 0.10, 0.18),   # very low — intro
+        (0.0, 8.0, 0.10, 0.18),  # very low — intro
         (8.0, 26.0, 0.35, 0.40),  # low-mid — verse
-        (26.0, 33.0, 0.55, 0.65), # mid — pre-chorus
-        (33.0, 50.0, 0.78, 0.92), # high — chorus
-        (50.0, 60.0, 0.20, 0.28), # very low — outro
+        (26.0, 33.0, 0.55, 0.65),  # mid — pre-chorus
+        (33.0, 50.0, 0.78, 0.92),  # high — chorus
+        (50.0, 60.0, 0.20, 0.28),  # very low — outro
     ]
     sections = label_sections(raw)
     names = [s.name for s in sections]
@@ -41,8 +41,8 @@ def test_intro_skipped_when_first_section_is_loud() -> None:
 
 def test_pre_chorus_labels_when_mid_energy_precedes_chorus() -> None:
     raw = [
-        (0.0, 8.0, 0.10, 0.15),    # intro
-        (8.0, 24.0, 0.30, 0.38),   # verse 1 (low)
+        (0.0, 8.0, 0.10, 0.15),  # intro
+        (8.0, 24.0, 0.30, 0.38),  # verse 1 (low)
         (24.0, 32.0, 0.55, 0.68),  # pre-chorus 1 (mid)
         (32.0, 50.0, 0.80, 0.92),  # chorus 1 (high)
         (50.0, 56.0, 0.15, 0.22),  # outro

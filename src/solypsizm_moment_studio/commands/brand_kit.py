@@ -41,9 +41,7 @@ def run(source: str | None, out: str | None, force: bool) -> None:
         raise click.ClickException(f"Source brand kit failed validation: {e}") from e
 
     if out_path.exists() and not force:
-        raise click.ClickException(
-            f"{out_path} already exists. Pass --force to overwrite."
-        )
+        raise click.ClickException(f"{out_path} already exists. Pass --force to overwrite.")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src_path, out_path)
@@ -55,9 +53,7 @@ def run(source: str | None, out: str | None, force: bool) -> None:
     if src_refs.is_dir():
         dest_refs = out_path.parent / "character-reference"
         if dest_refs.exists() and not force:
-            click.echo(
-                f"⚠ {dest_refs} already exists; not overwriting (use --force).", err=True
-            )
+            click.echo(f"⚠ {dest_refs} already exists; not overwriting (use --force).", err=True)
         else:
             if dest_refs.exists():
                 shutil.rmtree(dest_refs)

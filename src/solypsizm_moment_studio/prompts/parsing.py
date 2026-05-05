@@ -124,9 +124,7 @@ def _require_titled(items: list[dict], kind: str) -> list[dict]:
     for i, item in enumerate(items):
         title = item.get("title")
         if not isinstance(title, str) or not title.strip():
-            raise ParseError(
-                f"{kind} item {i} is missing a non-empty 'title' field."
-            )
+            raise ParseError(f"{kind} item {i} is missing a non-empty 'title' field.")
     return items
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import shutil
 import subprocess
 from pathlib import Path
@@ -43,13 +44,19 @@ def _find_existing_hash(root: Path, hash_value: str) -> str | None:
         scene_dir = root / "scenes" / s.concept_id
         for slot, frames in s.frames.items():
             for f in frames:
-                if f.hash and f.hash == hash_value:
-                    if (scene_dir / f"{s.id}-frames" / f.file).is_file():
-                        return f"{s.id}/{slot}/{f.file}"
+                if (
+                    f.hash
+                    and f.hash == hash_value
+                    and (scene_dir / f"{s.id}-frames" / f.file).is_file()
+                ):
+                    return f"{s.id}/{slot}/{f.file}"
         for clip in s.clip_takes:
-            if clip.hash and clip.hash == hash_value:
-                if (scene_dir / f"{s.id}-clips" / clip.file).is_file():
-                    return f"{s.id}/clips/{clip.file}"
+            if (
+                clip.hash
+                and clip.hash == hash_value
+                and (scene_dir / f"{s.id}-clips" / clip.file).is_file()
+            ):
+                return f"{s.id}/clips/{clip.file}"
     return None
 
 
@@ -79,11 +86,10 @@ def _stage_and_commit(src: Path, target_path: Path, move: bool) -> None:
         shutil.copy2(str(src), target_path)
 
 
-def run_import_frame(
-    file: str, scene_id: str | None, frame_type: str, move: bool = False
-) -> None:
+def run_import_frame(file: str, scene_id: str | None, frame_type: str, move: bool = False) -> None:
     root = require_project_root()
     from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+
     resolved = resolve_scene_id(root, scene_id)
     try:
         scene = load_scene(root, resolved)
@@ -133,6 +139,7 @@ def run_import_frame(
 def run_select_frame(scene_id: str | None, frame_type: str, filename: str) -> None:
     root = require_project_root()
     from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+
     resolved = resolve_scene_id(root, scene_id)
     scene = load_scene(root, resolved)
     frames = scene.frames.get(frame_type, [])
@@ -160,6 +167,7 @@ def run_import_clip(
 ) -> None:
     root = require_project_root()
     from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+
     resolved = resolve_scene_id(root, scene_id)
     try:
         scene = load_scene(root, resolved)
@@ -222,6 +230,7 @@ def run_import_clip(
 def run_select_clip(scene_id: str | None, filename: str) -> None:
     root = require_project_root()
     from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+
     resolved = resolve_scene_id(root, scene_id)
     scene = load_scene(root, resolved)
     match = next((c for c in scene.clip_takes if c.file == filename), None)
@@ -244,6 +253,7 @@ def run_select_clip(scene_id: str | None, filename: str) -> None:
 def run_review_clips(scene_id: str | None) -> None:
     root = require_project_root()
     from solypsizm_moment_studio.commands.scenes import resolve_scene_id
+
     resolved = resolve_scene_id(root, scene_id)
     scene = load_scene(root, resolved)
     if not scene.clip_takes:
@@ -263,7 +273,5 @@ def run_review_clips(scene_id: str | None) -> None:
 
     # Open in Finder so the artist can preview side-by-side.
     if folder.is_dir():
-        try:
+        with contextlib.suppress(FileNotFoundError):
             subprocess.run(["open", str(folder)], check=False)
-        except FileNotFoundError:
-            pass

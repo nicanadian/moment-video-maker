@@ -29,14 +29,17 @@ def resolve_text(spec: str) -> TextProvider:
     provider, model = _split(spec)
     if provider == "openai":
         from solypsizm_moment_studio.providers.adapters.openai_adapter import OpenAITextAdapter
+
         return OpenAITextAdapter(model_id=model)
     if provider == "gemini":
         from solypsizm_moment_studio.providers.adapters.gemini_adapter import GeminiTextAdapter
+
         return GeminiTextAdapter(model_id=model)
     if provider == "openrouter":
         from solypsizm_moment_studio.providers.adapters.openrouter_adapter import (
             OpenRouterTextAdapter,
         )
+
         return OpenRouterTextAdapter(model_id=model)
     raise ValueError(f"Unknown text provider {provider!r}.")
 
@@ -45,9 +48,11 @@ def resolve_image(spec: str) -> ImageProvider:
     provider, model = _split(spec)
     if provider == "openai":
         from solypsizm_moment_studio.providers.adapters.openai_adapter import OpenAIImageAdapter
+
         return OpenAIImageAdapter(model_id=model)
     if provider == "gemini":
         from solypsizm_moment_studio.providers.adapters.gemini_adapter import GeminiImageAdapter
+
         return GeminiImageAdapter(model_id=model)
     raise ValueError(f"Unknown image provider {provider!r}.")
 
@@ -56,9 +61,11 @@ def resolve_video(spec: str) -> VideoProvider:
     provider, model = _split(spec)
     if provider == "gemini":
         from solypsizm_moment_studio.providers.adapters.gemini_adapter import GeminiVideoAdapter
+
         return GeminiVideoAdapter(model_id=model)
     if provider == "openai":
         from solypsizm_moment_studio.providers.adapters.openai_adapter import OpenAIVideoAdapter
+
         return OpenAIVideoAdapter(model_id=model)
     raise ValueError(f"Unknown video provider {provider!r}.")
 

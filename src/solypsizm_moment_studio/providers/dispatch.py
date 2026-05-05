@@ -11,9 +11,7 @@ guards and persistence live here.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any
 
 from solypsizm_moment_studio.providers import cache as _cache
 from solypsizm_moment_studio.providers import cost, pricing, registry
@@ -93,6 +91,7 @@ def call_image(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         if out_path != cached_path:
             import shutil
+
             shutil.copy2(cached_path, out_path)
         return ImageResult(
             image_path=str(out_path),
@@ -156,6 +155,7 @@ def call_video(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         if out_path != cached_path:
             import shutil
+
             shutil.copy2(cached_path, out_path)
         return VideoResult(
             video_path=str(out_path),

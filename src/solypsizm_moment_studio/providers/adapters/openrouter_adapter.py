@@ -103,5 +103,8 @@ class OpenRouterTextAdapter:
             latency_ms=latency_ms,
             provider=self.provider,
             model_id=self.model_id,
-            raw_response={"id": getattr(response, "id", None), "usage": {"in": in_tokens, "out": out_tokens}},
+            raw_response={
+                "id": getattr(response, "id", None),
+                "usage": {"in": in_tokens, "out": out_tokens},
+            },
         )

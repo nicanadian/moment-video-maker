@@ -19,7 +19,6 @@ from solypsizm_moment_studio.state import (
     project_dir,
     require_project_root,
     save_project,
-    solypsizm_home,
 )
 from solypsizm_moment_studio.utils import now_iso
 
@@ -63,9 +62,7 @@ def run_new(slug: str, song_title: str, lyrics: str, audio: str) -> None:
     bk_path = brand_kit_path()
     click.echo(f"✓ Created project at {target}")
     if not bk_path.exists():
-        click.echo(
-            f"⚠ Brand kit not found at {bk_path}. Run `solypsizm bootstrap-brand-kit` next."
-        )
+        click.echo(f"⚠ Brand kit not found at {bk_path}. Run `solypsizm bootstrap-brand-kit` next.")
 
 
 def run_status(slug: str | None) -> None:
@@ -107,9 +104,7 @@ def run_status(slug: str | None) -> None:
 
     if moments:
         parts = ", ".join(f"{n} {s}" for s, n in sorted(by_status.items()))
-        click.echo(
-            f"Moments: {len(moments)} of target {project.target_moment_count} ({parts})"
-        )
+        click.echo(f"Moments: {len(moments)} of target {project.target_moment_count} ({parts})")
     else:
         click.echo(f"Moments: 0 of target {project.target_moment_count}")
 
@@ -124,9 +119,7 @@ def run_status(slug: str | None) -> None:
     if has_analysis and analysis is not None and analysis.sections:
         use_count: dict[str, int] = {}
         for m in moments:
-            use_count[m.source_song_section.name] = (
-                use_count.get(m.source_song_section.name, 0) + 1
-            )
+            use_count[m.source_song_section.name] = use_count.get(m.source_song_section.name, 0) + 1
         click.echo("")
         click.echo("Section coverage:")
         gaps: list[str] = []
@@ -140,7 +133,12 @@ def run_status(slug: str | None) -> None:
             click.echo(f"GAPS: {', '.join(gaps)}")
 
     next_hint = _next_action_hint(
-        project, concepts, scenes, scenes_with_clips, scenes_complete, moments,
+        project,
+        concepts,
+        scenes,
+        scenes_with_clips,
+        scenes_complete,
+        moments,
         has_analysis=has_analysis,
     )
     if next_hint:
@@ -163,27 +161,40 @@ def _next_action_hint(
     next'. The check order matches the workflow funnel.
     """
     if not concepts:
-        return "run `solypsizm brainstorm`, paste the prompt to ChatGPT, then `solypsizm import-concepts <response>`"
+        return (
+            "run `solypsizm brainstorm`, paste the prompt to ChatGPT, "
+            "then `solypsizm import-concepts <response>`"
+        )
     if not project.current_concept:
         return f"`solypsizm pick-concept <id>` (you have {len(concepts)} concept(s))"
     current_scenes = [s for s in scenes if s.concept_id == project.current_concept]
     if not current_scenes:
-        return f"run `solypsizm scenes` for {project.current_concept}, then `solypsizm import-scenes <response>`"
+        return (
+            f"run `solypsizm scenes` for {project.current_concept}, "
+            "then `solypsizm import-scenes <response>`"
+        )
     scenes_without_prompts = [s for s in current_scenes if s.status == "draft"]
     if scenes_without_prompts:
         target = scenes_without_prompts[0].id
         return f"`solypsizm prompts {target}` to emit ChatGPT/Veo prompts"
     if not scenes_with_clips:
-        return "import frames + clips: `solypsizm import-frame --scene <id> --type {start|end} <file>` and `solypsizm import-clip --scene <id> --rating N <file>`"
+        return (
+            "import frames + clips: `solypsizm import-frame --scene <id> "
+            "--type {start|end} <file>` and `solypsizm import-clip "
+            "--scene <id> --rating N <file>`"
+        )
     if not has_analysis:
         return "`solypsizm analyze` to detect song sections"
     if not moments:
-        return f"`solypsizm suggest-moments --count {project.target_moment_count}` to draft edit specs"
+        return (
+            f"`solypsizm suggest-moments --count {project.target_moment_count}` to draft edit specs"
+        )
     pending = [m for m in moments if m.status == "pending_review"]
     if pending:
         return f"`solypsizm review-moment {pending[0].id}` (you have {len(pending)} pending)"
     if len(moments) < project.target_moment_count:
-        return f"`solypsizm suggest-moments --count {project.target_moment_count - len(moments)}` to fill the remaining slots"
+        remaining = project.target_moment_count - len(moments)
+        return f"`solypsizm suggest-moments --count {remaining}` to fill the remaining slots"
     return None
 
 

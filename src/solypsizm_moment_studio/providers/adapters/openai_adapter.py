@@ -36,9 +36,7 @@ def _client():
     try:
         from openai import OpenAI
     except ImportError as e:
-        raise ProviderUnavailable(
-            "openai SDK not installed. Run `pip install -e '.[api]'`."
-        ) from e
+        raise ProviderUnavailable("openai SDK not installed. Run `pip install -e '.[api]'`.") from e
     api_key = secrets.openai_credential()
     # If api_key is None, the SDK will look for OAuth tokens / OPENAI_API_KEY
     # automatically. Don't pass api_key=None explicitly — the SDK rejects it.
@@ -53,7 +51,12 @@ def _translate_sdk_error(exc: Exception) -> ProviderError:
     msg = str(exc)
     if "RateLimit" in name:
         return ProviderRateLimited(msg)
-    if "ContentPolicy" in name or "Moderation" in name or "BadRequest" in name and "policy" in msg.lower():
+    if (
+        "ContentPolicy" in name
+        or "Moderation" in name
+        or "BadRequest" in name
+        and "policy" in msg.lower()
+    ):
         return ProviderRefused(msg)
     if "APIConnection" in name or "ServiceUnavailable" in name or "InternalServer" in name:
         return ProviderUnavailable(msg)
@@ -171,6 +174,7 @@ class OpenAIImageAdapter:
             if not url:
                 raise ProviderError("OpenAI returned no image data.")
             import urllib.request
+
             with urllib.request.urlopen(url) as resp:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_bytes(resp.read())

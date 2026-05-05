@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import click
 
@@ -30,13 +29,18 @@ def _check_environment() -> tuple[list[str], list[str]]:
     home = solypsizm_home()
     info.append(f"SOLYPSIZM_HOME = {home}")
     if not home.exists():
-        issues.append(f"SOLYPSIZM_HOME ({home}) doesn't exist; run `solypsizm bootstrap-brand-kit` to populate it.")
+        issues.append(
+            f"SOLYPSIZM_HOME ({home}) doesn't exist; run "
+            "`solypsizm bootstrap-brand-kit` to populate it."
+        )
 
     bk = brand_kit_path()
     if bk.is_file():
         info.append(f"brand-kit.json ✓ at {bk}")
     else:
-        issues.append(f"brand-kit.json missing at {bk}; run `solypsizm bootstrap-brand-kit --source <path>`.")
+        issues.append(
+            f"brand-kit.json missing at {bk}; run `solypsizm bootstrap-brand-kit --source <path>`."
+        )
 
     for binary, role in [
         ("ffplay", "audio preview during `review-moment`"),
@@ -52,9 +56,12 @@ def _check_environment() -> tuple[list[str], list[str]]:
 
     try:
         import librosa  # noqa: F401
+
         info.append("librosa ✓ installed")
     except ImportError:
-        issues.append("librosa not installed — `analyze` won't work. Run `pip install -e '.[audio]'`.")
+        issues.append(
+            "librosa not installed — `analyze` won't work. Run `pip install -e '.[audio]'`."
+        )
 
     return issues, info
 

@@ -26,7 +26,6 @@ from solypsizm_moment_studio.suggest import (
     suggest_moments,
 )
 
-
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
@@ -179,8 +178,9 @@ def test_score_rewards_energy_match() -> None:
     cfg = EditConfig()
     high_scene = _scene("s1", moods=["release"], energy="high")
     low_scene = _scene("s2", moods=["release"], energy="low")
-    assert score_clip_for_section(high_scene, high_scene.clip_takes[0], section, cfg) > \
-           score_clip_for_section(low_scene, low_scene.clip_takes[0], section, cfg)
+    assert score_clip_for_section(
+        high_scene, high_scene.clip_takes[0], section, cfg
+    ) > score_clip_for_section(low_scene, low_scene.clip_takes[0], section, cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -191,26 +191,76 @@ def test_score_rewards_energy_match() -> None:
 def _diverse_scene_pool() -> list[Scene]:
     """A pool of 10 scenes spanning low/mid/high energy and varied moods, all rated ≥ 4."""
     scenes = [
-        _scene("scene-01-tower", moods=["isolation", "approach"], energy="low",
-               section_fit=["verse 1"], clip_file="t1.mp4"),
-        _scene("scene-02-walk", moods=["wandering"], energy="low-mid",
-               section_fit=["verse 1"], clip_file="t2.mp4"),
-        _scene("scene-03-rise", moods=["tension", "rising"], energy="mid",
-               section_fit=["pre-chorus 1"], clip_file="t3.mp4"),
-        _scene("scene-04-summit", moods=["release", "anthemic"], energy="high",
-               section_fit=["chorus 1"], clip_file="t4.mp4"),
-        _scene("scene-05-leap", moods=["exhilaration"], energy="high",
-               section_fit=["chorus 1"], clip_file="t5.mp4"),
-        _scene("scene-06-mirror", moods=["reflection"], energy="low-mid",
-               section_fit=["verse 2"], clip_file="t6.mp4"),
-        _scene("scene-07-fall", moods=["drift"], energy="low",
-               section_fit=["bridge"], clip_file="t7.mp4"),
-        _scene("scene-08-flames", moods=["release"], energy="mid-high",
-               section_fit=["chorus 2"], clip_file="t8.mp4"),
-        _scene("scene-09-sky", moods=["anthemic", "release"], energy="high",
-               section_fit=["chorus 2"], clip_file="t9.mp4"),
-        _scene("scene-10-fade", moods=["departure", "stillness"], energy="low",
-               section_fit=["outro"], clip_file="t10.mp4"),
+        _scene(
+            "scene-01-tower",
+            moods=["isolation", "approach"],
+            energy="low",
+            section_fit=["verse 1"],
+            clip_file="t1.mp4",
+        ),
+        _scene(
+            "scene-02-walk",
+            moods=["wandering"],
+            energy="low-mid",
+            section_fit=["verse 1"],
+            clip_file="t2.mp4",
+        ),
+        _scene(
+            "scene-03-rise",
+            moods=["tension", "rising"],
+            energy="mid",
+            section_fit=["pre-chorus 1"],
+            clip_file="t3.mp4",
+        ),
+        _scene(
+            "scene-04-summit",
+            moods=["release", "anthemic"],
+            energy="high",
+            section_fit=["chorus 1"],
+            clip_file="t4.mp4",
+        ),
+        _scene(
+            "scene-05-leap",
+            moods=["exhilaration"],
+            energy="high",
+            section_fit=["chorus 1"],
+            clip_file="t5.mp4",
+        ),
+        _scene(
+            "scene-06-mirror",
+            moods=["reflection"],
+            energy="low-mid",
+            section_fit=["verse 2"],
+            clip_file="t6.mp4",
+        ),
+        _scene(
+            "scene-07-fall",
+            moods=["drift"],
+            energy="low",
+            section_fit=["bridge"],
+            clip_file="t7.mp4",
+        ),
+        _scene(
+            "scene-08-flames",
+            moods=["release"],
+            energy="mid-high",
+            section_fit=["chorus 2"],
+            clip_file="t8.mp4",
+        ),
+        _scene(
+            "scene-09-sky",
+            moods=["anthemic", "release"],
+            energy="high",
+            section_fit=["chorus 2"],
+            clip_file="t9.mp4",
+        ),
+        _scene(
+            "scene-10-fade",
+            moods=["departure", "stillness"],
+            energy="low",
+            section_fit=["outro"],
+            clip_file="t10.mp4",
+        ),
     ]
     return scenes
 
@@ -379,20 +429,27 @@ def test_clips_have_in_point_and_out_point() -> None:
 def test_suggest_moments_continues_numbering_via_start_index() -> None:
     """Re-running suggest-moments must produce different IDs, not clobber."""
     moments_first, _ = suggest_moments(
-        project=_project(), song_analysis=_song(), scenes=_diverse_scene_pool(),
-        cfg=EditConfig(), count=2, strategy="section_focus", start_index=1,
+        project=_project(),
+        song_analysis=_song(),
+        scenes=_diverse_scene_pool(),
+        cfg=EditConfig(),
+        count=2,
+        strategy="section_focus",
+        start_index=1,
     )
     moments_second, _ = suggest_moments(
-        project=_project(), song_analysis=_song(), scenes=_diverse_scene_pool(),
-        cfg=EditConfig(), count=2, strategy="section_focus",
+        project=_project(),
+        song_analysis=_song(),
+        scenes=_diverse_scene_pool(),
+        cfg=EditConfig(),
+        count=2,
+        strategy="section_focus",
         start_index=len(moments_first) + 1,
         reserved_ids={m.id for m in moments_first},
     )
     first_ids = {m.id for m in moments_first}
     second_ids = {m.id for m in moments_second}
-    assert not (first_ids & second_ids), (
-        f"second run reused IDs: {first_ids & second_ids}"
-    )
+    assert not (first_ids & second_ids), f"second run reused IDs: {first_ids & second_ids}"
     # Sequential numbering — first batch has moment-01..02, second 03..04.
     nums = sorted(int(m.id.split("-")[1]) for m in moments_first + moments_second)
     assert nums == [1, 2, 3, 4]
@@ -402,8 +459,12 @@ def test_suggest_moments_disambiguates_id_collisions_with_suffix() -> None:
     """If a generated ID collides with a reserved ID, append -2 / -3."""
     reserved = {"moment-01-intro"}
     moments, _ = suggest_moments(
-        project=_project(), song_analysis=_song(), scenes=_diverse_scene_pool(),
-        cfg=EditConfig(), count=1, strategy="section_focus",
+        project=_project(),
+        song_analysis=_song(),
+        scenes=_diverse_scene_pool(),
+        cfg=EditConfig(),
+        count=1,
+        strategy="section_focus",
         start_index=1,  # would naturally collide
         reserved_ids=reserved,
     )
@@ -415,12 +476,20 @@ def test_suggest_moments_disambiguates_id_collisions_with_suffix() -> None:
 
 def test_suggest_moments_returns_stop_reason_when_pool_too_small() -> None:
     moments, reason = suggest_moments(
-        project=_project(), song_analysis=_song(),
+        project=_project(),
+        song_analysis=_song(),
         scenes=[_scene("s1", moods=["release"])],
-        cfg=EditConfig(), count=4, strategy="section_focus",
+        cfg=EditConfig(),
+        count=4,
+        strategy="section_focus",
     )
     assert moments == []
-    assert reason is not None and "exhaust" in reason.lower() or "pool" in reason.lower() or "rating" in reason.lower()
+    assert (
+        reason is not None
+        and "exhaust" in reason.lower()
+        or "pool" in reason.lower()
+        or "rating" in reason.lower()
+    )
 
 
 def test_cold_hook_leads_with_high_energy_clip_on_chorus() -> None:

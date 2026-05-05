@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 import click
@@ -34,7 +35,7 @@ from solypsizm_moment_studio.utils import (
 )
 
 
-def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
+def _load_context() -> tuple[Path, BrandKit, Project]:  # noqa: F821
     # Mirrors commands/concepts.py — keeps project.brand_kit_path live.
     root = require_project_root()
     project = load_project(root)
@@ -49,11 +50,9 @@ def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
     return root, bk, project
 
 
-def _require_current_concept(root: Path, project) -> "Concept":  # noqa: F821
+def _require_current_concept(root: Path, project) -> Concept:  # noqa: F821
     if not project.current_concept:
-        raise click.ClickException(
-            "No current concept. Run `solypsizm pick-concept <id>` first."
-        )
+        raise click.ClickException("No current concept. Run `solypsizm pick-concept <id>` first.")
     return load_concept(root, project.current_concept)
 
 
@@ -146,8 +145,14 @@ def _persist_scenes(root, project, concept, items, source: str) -> None:
 
     concept.scenes = sorted(set(concept.scenes) | set(created))
     save_concept(root, concept)
-    append_log(root, "scenes_imported", concept_id=concept.id, count=len(created),
-               ids=created, source=source)
+    append_log(
+        root,
+        "scenes_imported",
+        concept_id=concept.id,
+        count=len(created),
+        ids=created,
+        source=source,
+    )
     click.echo(f"✓ Imported {len(created)} scenes for {concept.id}:")
     for sid in created:
         click.echo(f"  {sid}")
@@ -200,15 +205,23 @@ def run_pick_scene(scene_id: str) -> None:
 
 def save_scene_pick(root, project) -> None:
     from solypsizm_moment_studio.state import save_project
+
     save_project(root, project)
 
 
-def _run_prompts_api(root, bk, project, scene, image_model, video_model) -> None:
+def _run_prompts_api(
+    root, bk, project, scene, image_model, video_model, dry_run: bool = False
+) -> None:
     """Direct generation: start frame → end frame → motion clip, scored and
     imported into the scene as the selected take."""
     from solypsizm_moment_studio.commands.media import (
         run_import_clip,
         run_import_frame,
+    )
+    from solypsizm_moment_studio.prompts import (
+        end_frame_prompt,
+        start_frame_prompt,
+        veo_motion_prompt,
     )
     from solypsizm_moment_studio.providers import dispatch, registry
     from solypsizm_moment_studio.providers.exceptions import (
@@ -220,7 +233,8 @@ def _run_prompts_api(root, bk, project, scene, image_model, video_model) -> None
     video_spec = video_model or registry.DEFAULT_VIDEO
 
     # Resolve the canonical reference image once.
-    from solypsizm_moment_studio.state import brand_kit_path, solypsizm_home
+    from solypsizm_moment_studio.state import brand_kit_path
+
     bk_dir = brand_kit_path().parent
     reference = (bk_dir / bk.character.reference_image).resolve()
     if not reference.is_file():
@@ -230,64 +244,98 @@ def _run_prompts_api(root, bk, project, scene, image_model, video_model) -> None
         )
 
     scene_dir = root / "scenes" / scene.concept_id
-    staging = scene_dir / f"{scene.id}-staging"
-    staging.mkdir(parents=True, exist_ok=True)
-
-    start_path = staging / "start.png"
-    end_path = staging / "end.png"
-    clip_path = staging / "motion.mp4"
 
     start_prompt = start_frame_prompt(bk, project, scene)
     end_prompt = end_frame_prompt(bk, project, scene)
     veo_prompt = veo_motion_prompt(bk, project, scene)
 
+    if dry_run:
+        plan_path = scene_dir / f"{scene.id}-api-dry-run.md"
+        plan = (
+            f"# API dry run — {scene.id}\n\n"
+            f"Image model: `{image_spec}`\n\n"
+            f"Video model: `{video_spec}`\n\n"
+            "## 1. Start frame prompt\n\n"
+            f"```\n{start_prompt}\n```\n\n"
+            "## 2. End frame prompt\n\n"
+            f"```\n{end_prompt}\n```\n\n"
+            "## 3. Motion prompt\n\n"
+            f"```\n{veo_prompt}\n```\n"
+        )
+        plan_path.write_text(plan, encoding="utf-8")
+        click.echo(f"DRY RUN: wrote API generation plan to {plan_path}")
+        return
+
+    staging = scene_dir / f"{scene.id}-staging"
+    staging.mkdir(parents=True, exist_ok=True)
+    start_path = staging / "start.png"
+    end_path = staging / "end.png"
+    clip_path = staging / "motion.mp4"
+
     try:
         click.echo(f"[1/3] start frame via {image_spec}...", err=True)
         start = dispatch.call_image(
-            root, image_spec,
+            root,
+            image_spec,
             prompt=start_prompt,
             out_path=start_path,
             reference=reference,
         )
-        click.echo(f"      ✓ {start.latency_ms}ms, ${start.cost_usd:.4f}{' [cache]' if start.cache_hit else ''}", err=True)
+        start_cache = " [cache]" if start.cache_hit else ""
+        click.echo(
+            f"      ✓ {start.latency_ms}ms, ${start.cost_usd:.4f}{start_cache}",
+            err=True,
+        )
 
         click.echo(f"[2/3] end frame via {image_spec}...", err=True)
         end = dispatch.call_image(
-            root, image_spec,
+            root,
+            image_spec,
             prompt=end_prompt,
             out_path=end_path,
             reference=start_path,  # end-frame uses start as the seed
         )
-        click.echo(f"      ✓ {end.latency_ms}ms, ${end.cost_usd:.4f}{' [cache]' if end.cache_hit else ''}", err=True)
+        click.echo(
+            f"      ✓ {end.latency_ms}ms, ${end.cost_usd:.4f}{' [cache]' if end.cache_hit else ''}",
+            err=True,
+        )
 
         click.echo(f"[3/3] motion clip via {video_spec} (~30-90s)...", err=True)
         motion = dispatch.call_video(
-            root, video_spec,
+            root,
+            video_spec,
             prompt=veo_prompt,
             out_path=clip_path,
             start_frame=start_path,
             end_frame=end_path,
             duration_seconds=float(scene.duration_target_seconds or 6.0),
         )
-        click.echo(f"      ✓ {motion.latency_ms}ms, ${motion.cost_usd:.4f}{' [cache]' if motion.cache_hit else ''}", err=True)
+        motion_cache = " [cache]" if motion.cache_hit else ""
+        click.echo(
+            f"      ✓ {motion.latency_ms}ms, ${motion.cost_usd:.4f}{motion_cache}",
+            err=True,
+        )
     except BudgetExceeded as e:
         raise click.ClickException(str(e)) from e
     except ProviderError as e:
         raise click.ClickException(f"Provider call failed: {e}") from e
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
 
     # Hand off to the existing import pipeline (move-mode so we don't
     # duplicate the staged files into the scene folder + the cache).
     run_import_frame(str(start_path), scene_id=scene.id, frame_type="start", move=True)
     run_import_frame(str(end_path), scene_id=scene.id, frame_type="end", move=True)
-    run_import_clip(str(clip_path), scene_id=scene.id, rating=None, notes="auto-generated", move=True)
+    run_import_clip(
+        str(clip_path), scene_id=scene.id, rating=None, notes="auto-generated", move=True
+    )
     # Clean up staging.
-    try:
+    with contextlib.suppress(OSError):
         staging.rmdir()
-    except OSError:
-        pass
 
     append_log(
-        root, "prompts_api",
+        root,
+        "prompts_api",
         scene_id=scene.id,
         image_model=image_spec,
         video_model=video_spec,
@@ -332,6 +380,7 @@ def run_prompts(
     api: bool = False,
     image_model: str | None = None,
     video_model: str | None = None,
+    dry_run: bool = False,
 ) -> None:
     root, bk, project = _load_context()
     resolved = resolve_scene_id(root, scene_id)
@@ -341,7 +390,7 @@ def run_prompts(
         raise click.ClickException(str(e)) from e
 
     if api:
-        _run_prompts_api(root, bk, project, scene, image_model, video_model)
+        _run_prompts_api(root, bk, project, scene, image_model, video_model, dry_run=dry_run)
         return
     md = scene_prompts_markdown(bk, project, scene)
     out_path = root / "scenes" / scene.concept_id / f"{scene.id}-prompts.md"

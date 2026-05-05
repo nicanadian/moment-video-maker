@@ -11,7 +11,7 @@ which fsyncs and renames atomically.
 from __future__ import annotations
 
 import os
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from solypsizm_moment_studio.providers.exceptions import BudgetExceeded
@@ -36,15 +36,16 @@ def _budget_dir() -> Path:
 
 
 def _today_path(d: date | None = None) -> Path:
-    d = d or datetime.now(timezone.utc).date()
+    d = d or datetime.now(UTC).date()
     return _budget_dir() / f"{d.isoformat()}.json"
 
 
 def _load_today() -> dict:
     path = _today_path()
     if not path.is_file():
-        return {"date": datetime.now(timezone.utc).date().isoformat(), "calls": [], "total_usd": 0.0}
+        return {"date": datetime.now(UTC).date().isoformat(), "calls": [], "total_usd": 0.0}
     import json
+
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -78,7 +79,7 @@ def record(actual_cost_usd: float, *, model: str, kind: str, latency_ms: int) ->
     """Append a completed call to today's ledger. Idempotent against the
     file rename (atomic write)."""
     record = {
-        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "ts": datetime.now(UTC).isoformat(timespec="seconds"),
         "kind": kind,
         "model": model,
         "cost_usd": round(actual_cost_usd, 6),
@@ -98,6 +99,7 @@ def history(days: int = 30) -> list[dict]:
     out: list[dict] = []
     for path in sorted(folder.glob("*.json"), reverse=True)[:days]:
         import json
+
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):

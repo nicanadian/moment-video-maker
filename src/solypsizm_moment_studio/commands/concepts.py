@@ -26,7 +26,7 @@ from solypsizm_moment_studio.state import (
 from solypsizm_moment_studio.utils import clipboard_copy, coerce_str_list, resolve_id, slugify
 
 
-def _load_context() -> tuple[Path, "BrandKit", "Project"]:  # noqa: F821
+def _load_context() -> tuple[Path, BrandKit, Project]:  # noqa: F821
     from solypsizm_moment_studio.models import BrandKit, Project  # noqa: F401
 
     root = require_project_root()

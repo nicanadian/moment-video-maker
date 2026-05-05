@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import json
 import re
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from solypsizm_moment_studio.judge import JudgeScore, judge_image, judge_video
 from solypsizm_moment_studio.providers import dispatch
@@ -142,7 +141,7 @@ def run(
     """Execute the benchmark. Returns the path to the run directory."""
     home = solypsizm_home()
     if out_dir is None:
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+        ts = datetime.now(UTC).strftime("%Y-%m-%dT%H-%M-%S")
         out_dir = home / "benchmarks" / "runs" / ts
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -169,8 +168,11 @@ def run(
             suffix = ".png" if prompt_set.modality == "image" else ".mp4"
             artifact_path = out_dir / f"{safe_spec}__take-{take:02d}{suffix}"
             record = BenchmarkRecord(
-                spec=spec, take=take, artifact_path=str(artifact_path),
-                cost_usd=0.0, latency_ms=0,
+                spec=spec,
+                take=take,
+                artifact_path=str(artifact_path),
+                cost_usd=0.0,
+                latency_ms=0,
             )
             try:
                 if prompt_set.modality == "image":
@@ -197,12 +199,18 @@ def run(
                 # Score it.
                 if prompt_set.modality == "image":
                     score = judge_image(
-                        bk, reference_path, artifact_path, prompt_set.prompt,
+                        bk,
+                        reference_path,
+                        artifact_path,
+                        prompt_set.prompt,
                         model=judge_model,
                     )
                 else:
                     score = judge_video(
-                        bk, reference_path, artifact_path, prompt_set.prompt,
+                        bk,
+                        reference_path,
+                        artifact_path,
+                        prompt_set.prompt,
                         model=judge_model,
                     )
                 record.score = score
@@ -216,7 +224,7 @@ def run(
         "takes": takes,
         "specs": specs,
         "records": [r.model_dump() for r in records],
-        "ran_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "ran_at": datetime.now(UTC).isoformat(timespec="seconds"),
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -236,9 +244,7 @@ def _build_report(records: list[BenchmarkRecord], prompt_set: PromptSet) -> str:
         total_cost = sum(r.cost_usd for r in group)
         total_latency = sum(r.latency_ms for r in group)
         scored = [r for r in group if r.score is not None]
-        avg_score = (
-            sum(r.score.total for r in scored) / len(scored) if scored else 0.0
-        )
+        avg_score = sum(r.score.total for r in scored) / len(scored) if scored else 0.0
         errors = sum(1 for r in group if r.error)
         rows.append(
             (spec, avg_score, total_cost, total_latency // max(1, len(group)), len(group), errors)

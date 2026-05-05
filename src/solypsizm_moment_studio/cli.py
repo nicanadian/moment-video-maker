@@ -31,6 +31,7 @@ def main(project_slug: str | None) -> None:
 
 # --- Project lifecycle ------------------------------------------------------
 
+
 @main.command("new", help="Create a new project for a song.")
 @click.argument("slug")
 @click.option("--song-title", required=True)
@@ -54,6 +55,7 @@ def open_cmd(slug: str) -> None:
 
 # --- Brand kit --------------------------------------------------------------
 
+
 @main.command("bootstrap-brand-kit", help="Install brand-kit.json into ~/solypsizm/.")
 @click.option("--source", type=click.Path(exists=True, dir_okay=False))
 @click.option("--out", type=click.Path(dir_okay=False))
@@ -63,6 +65,7 @@ def bootstrap_brand_kit_cmd(source: str | None, out: str | None, force: bool) ->
 
 
 # --- Concepts ---------------------------------------------------------------
+
 
 @main.command("brainstorm", help="Emit a ChatGPT brainstorm prompt for the current project.")
 @click.option("--count", default=5, show_default=True)
@@ -100,6 +103,7 @@ def rate_concept_cmd(concept_id: str, rating: int, notes: str) -> None:
 
 # --- Scenes -----------------------------------------------------------------
 
+
 @main.command("pick-scene", help="Set the current scene (used when --scene is omitted).")
 @click.argument("scene_id")
 def pick_scene_cmd(scene_id: str) -> None:
@@ -131,14 +135,20 @@ def list_scenes_cmd() -> None:
 @click.option("--api", is_flag=True, help="Generate frames + motion directly via providers.")
 @click.option("--image-model", help="Override the default image model.")
 @click.option("--video-model", help="Override the default video model.")
+@click.option("--dry-run", is_flag=True, help="Plan API generation without provider calls.")
 def prompts_cmd(
-    scene_id: str | None, copy: bool, api: bool,
-    image_model: str | None, video_model: str | None,
+    scene_id: str | None,
+    copy: bool,
+    api: bool,
+    image_model: str | None,
+    video_model: str | None,
+    dry_run: bool,
 ) -> None:
-    cmd_scenes.run_prompts(scene_id, copy, api, image_model, video_model)
+    cmd_scenes.run_prompts(scene_id, copy, api, image_model, video_model, dry_run)
 
 
 # --- Frames and clips -------------------------------------------------------
+
 
 @main.command("import-frame", help="Import a frame PNG into a scene (copies by default).")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
@@ -163,9 +173,7 @@ def select_frame_cmd(scene_id: str, frame_type: str, filename: str) -> None:
 @click.option("--rating", type=click.IntRange(1, 5))
 @click.option("--notes", default="")
 @click.option("--move", is_flag=True, help="Move the source file instead of copying.")
-def import_clip_cmd(
-    file: str, scene_id: str, rating: int | None, notes: str, move: bool
-) -> None:
+def import_clip_cmd(file: str, scene_id: str, rating: int | None, notes: str, move: bool) -> None:
     cmd_media.run_import_clip(file, scene_id, rating, notes, move)
 
 
@@ -184,8 +192,11 @@ def review_clips_cmd(scene_id: str) -> None:
 
 # --- Song analysis ----------------------------------------------------------
 
+
 @main.command("analyze", help="Run librosa song analysis → audio/song-analysis.json.")
-@click.option("--force", is_flag=True, help="Regenerate (shows a diff and confirms before overwriting).")
+@click.option(
+    "--force", is_flag=True, help="Regenerate (shows a diff and confirms before overwriting)."
+)
 def analyze_cmd(force: bool) -> None:
     cmd_audio.run_analyze(force)
 
@@ -198,6 +209,7 @@ def sections_cmd() -> None:
 # --- Diagnostics ------------------------------------------------------------
 
 # --- API mode (v2) ----------------------------------------------------------
+
 
 @main.group("secrets", help="Manage provider credentials (OpenAI / Gemini / OpenRouter).")
 def secrets_group() -> None:
@@ -230,23 +242,48 @@ def secrets_remove_cmd(provider: str) -> None:
 
 @main.command("auto", help="Autonomous pipeline: song → 9 reviewable moments.")
 @click.option("--moments", default=9, show_default=True, type=int)
-@click.option("--review-gates", default="concept,final", show_default=True,
-              help="Comma-separated stages that pause for review (or 'none').")
-@click.option("--threshold", default=32.0, show_default=True, type=float,
-              help="Auto-approve score (0-40).")
-@click.option("--budget", default=30.0, show_default=True, type=float,
-              help="Per-run cap (independent of daily cap).")
+@click.option(
+    "--review-gates",
+    default="concept,final",
+    show_default=True,
+    help="Comma-separated stages that pause for review (or 'none').",
+)
+@click.option(
+    "--threshold", default=32.0, show_default=True, type=float, help="Auto-approve score (0-40)."
+)
+@click.option(
+    "--budget",
+    default=30.0,
+    show_default=True,
+    type=float,
+    help="Per-run cap (independent of daily cap).",
+)
 @click.option("--text-model", default="gemini:gemini-2.5-flash", show_default=True)
 @click.option("--image-model", default="openai:gpt-image-1", show_default=True)
 @click.option("--video-model", default="gemini:veo-3", show_default=True)
 @click.option("--reset", is_flag=True, help="Wipe any existing pipeline state and start over.")
+@click.option("--dry-run", is_flag=True, help="Print the auto plan without state/provider calls.")
 def auto_cmd(
-    moments: int, review_gates: str, threshold: float, budget: float,
-    text_model: str, image_model: str, video_model: str, reset: bool,
+    moments: int,
+    review_gates: str,
+    threshold: float,
+    budget: float,
+    text_model: str,
+    image_model: str,
+    video_model: str,
+    reset: bool,
+    dry_run: bool,
 ) -> None:
     cmd_auto.run_auto_cmd(
-        moments, review_gates, threshold, budget,
-        text_model, image_model, video_model, reset,
+        moments,
+        review_gates,
+        threshold,
+        budget,
+        text_model,
+        image_model,
+        video_model,
+        reset,
+        dry_run,
     )
 
 
@@ -262,16 +299,39 @@ def auto_status_cmd() -> None:
 
 @main.command("benchmark", help="Run an image/video model benchmark with VLM-judge scoring.")
 @click.argument("prompt_set")
-@click.option("--model", "models", multiple=True, required=True,
-              help="Model spec, e.g. gemini:imagen-4 (repeatable).")
-@click.option("--takes", default=1, show_default=True, type=int,
-              help="Independent generations per model (independent seeds).")
-@click.option("--judge", default="gemini-2.5-flash", show_default=True,
-              help="Gemini model to use for scoring.")
-@click.option("--budget", type=float, default=None,
-              help="Per-run cost cap in USD (independent of daily cap).")
-def benchmark_cmd(prompt_set: str, models: tuple[str, ...], takes: int, judge: str, budget: float | None) -> None:
-    cmd_benchmark.run_benchmark(prompt_set, models, takes, judge, budget)
+@click.option(
+    "--model",
+    "models",
+    multiple=True,
+    required=True,
+    help="Model spec, e.g. gemini:imagen-4 (repeatable).",
+)
+@click.option(
+    "--takes",
+    default=1,
+    show_default=True,
+    type=int,
+    help="Independent generations per model (independent seeds).",
+)
+@click.option(
+    "--judge",
+    default="gemini-2.5-flash",
+    show_default=True,
+    help="Gemini model to use for scoring.",
+)
+@click.option(
+    "--budget", type=float, default=None, help="Per-run cost cap in USD (independent of daily cap)."
+)
+@click.option("--dry-run", is_flag=True, help="Estimate benchmark cost without provider calls.")
+def benchmark_cmd(
+    prompt_set: str,
+    models: tuple[str, ...],
+    takes: int,
+    judge: str,
+    budget: float | None,
+    dry_run: bool,
+) -> None:
+    cmd_benchmark.run_benchmark(prompt_set, models, takes, judge, budget, dry_run=dry_run)
 
 
 @main.command("budget", help="Show today's API spend against the daily cap.")
@@ -287,8 +347,14 @@ def cache_prune_cmd(older_than: int) -> None:
 
 # --- Diagnostics ------------------------------------------------------------
 
+
 @main.command("doctor", help="Validate project structure, file references, and brand kit.")
-@click.option("--global", "check_global", is_flag=True, help="Check CLI environment (binaries + brand kit) without a project.")
+@click.option(
+    "--global",
+    "check_global",
+    is_flag=True,
+    help="Check CLI environment (binaries + brand kit) without a project.",
+)
 def doctor_cmd(check_global: bool) -> None:
     cmd_diagnostic.run_doctor(check_global=check_global)
 
@@ -304,6 +370,7 @@ def log_cmd(tail: int, show_all: bool, event: str | None, since: str | None) -> 
 
 # --- Moments ----------------------------------------------------------------
 
+
 @main.command("suggest-moments", help="Generate moment edit specs from clips + sections.")
 @click.option("--count", default=9, show_default=True)
 @click.option(
@@ -311,7 +378,10 @@ def log_cmd(tail: int, show_all: bool, event: str | None, since: str | None) -> 
     type=click.Choice(["tension_release", "section_focus", "cold_hook"]),
     default="section_focus",
     show_default=True,
-    help="section_focus = even diversity. tension_release = low→high build. cold_hook = climax-first.",
+    help=(
+        "section_focus = even diversity. tension_release = low→high build. "
+        "cold_hook = climax-first."
+    ),
 )
 def suggest_moments_cmd(count: int, strategy: str) -> None:
     cmd_moments.run_suggest_moments(count, strategy)
@@ -330,7 +400,9 @@ def review_moment_cmd(moment_id: str, approve: bool, reject: bool) -> None:
     cmd_moments.run_review_moment(moment_id, approve, reject)
 
 
-@main.command("render-moment", help="(Pending Variant Builder) hand off an approved moment to render.")
+@main.command(
+    "render-moment", help="(Pending Variant Builder) hand off an approved moment to render."
+)
 @click.argument("moment_id")
 def render_moment_cmd(moment_id: str) -> None:
     cmd_moments.run_render_moment(moment_id)

@@ -7,6 +7,7 @@ the credentials file. The ``google-genai`` SDK is the modern entry point
 
 from __future__ import annotations
 
+import contextlib
 import time
 from pathlib import Path
 from typing import Any
@@ -266,7 +267,5 @@ def _strip_audio_inplace(path: Path) -> None:
         tmp.replace(path)
     except (subprocess.CalledProcessError, OSError):
         if tmp.is_file():
-            try:
+            with contextlib.suppress(OSError):
                 tmp.unlink()
-            except OSError:
-                pass

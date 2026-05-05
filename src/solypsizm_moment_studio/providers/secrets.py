@@ -12,6 +12,7 @@ exists and report which mode is active.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import stat
@@ -33,10 +34,8 @@ def _save_creds_file(creds: dict[str, str]) -> None:
     CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
     CREDENTIALS_PATH.write_text(json.dumps(creds, indent=2), encoding="utf-8")
     # chmod 600 so other users on the machine can't read it.
-    try:
+    with contextlib.suppress(OSError):
         CREDENTIALS_PATH.chmod(stat.S_IRUSR | stat.S_IWUSR)
-    except OSError:
-        pass
 
 
 def get(name: str, *, env_var: str | None = None) -> str | None:

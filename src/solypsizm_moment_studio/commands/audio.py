@@ -89,9 +89,7 @@ def _diff_analysis(old, new) -> str:
     for name in sorted(old_names.keys() & new_names.keys()):
         a, b = old_names[name], new_names[name]
         if abs(a.start - b.start) > 0.5 or abs(a.end - b.end) > 0.5:
-            lines.append(
-                f"  {name}: {a.start:.1f}-{a.end:.1f}s → {b.start:.1f}-{b.end:.1f}s"
-            )
+            lines.append(f"  {name}: {a.start:.1f}-{a.end:.1f}s → {b.start:.1f}-{b.end:.1f}s")
     if not lines:
         lines.append("  (no significant changes)")
     return "\n".join(lines)

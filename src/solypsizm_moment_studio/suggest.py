@@ -171,11 +171,7 @@ def _pick_hook_clip(
     ]
     if not available:
         return None
-    low = [
-        (scene, clip)
-        for scene, clip in available
-        if scene.energy_target in {"low", "low-mid"}
-    ]
+    low = [(scene, clip) for scene, clip in available if scene.energy_target in {"low", "low-mid"}]
     return low[0] if low else None
 
 
@@ -198,13 +194,11 @@ def _pick_climax_clip(
     if not available:
         return None
     high = [
-        (scene, clip)
-        for scene, clip in available
-        if scene.energy_target in {"high", "mid-high"}
+        (scene, clip) for scene, clip in available if scene.energy_target in {"high", "mid-high"}
     ]
     if not high:
         return None
-    return max(high, key=lambda sc: (sc[1].rating or 0))
+    return max(high, key=lambda sc: sc[1].rating or 0)
 
 
 def pick_clips_for_section(

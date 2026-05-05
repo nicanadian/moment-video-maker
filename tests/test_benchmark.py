@@ -5,7 +5,8 @@ benchmark.
 
 from __future__ import annotations
 
-from pathlib import Path
+import click
+import pytest
 
 from solypsizm_moment_studio.benchmark import (
     BenchmarkRecord,
@@ -14,8 +15,9 @@ from solypsizm_moment_studio.benchmark import (
     _parse_prompt_set,
     estimate_cost,
 )
+from solypsizm_moment_studio.commands.benchmark import run_benchmark
 from solypsizm_moment_studio.judge import JudgeScore
-
+from solypsizm_moment_studio.providers.exceptions import ProviderError
 
 # ---------------------------------------------------------------------------
 # Prompt-set parser
@@ -78,21 +80,30 @@ def test_parse_handles_quoted_size(tmp_path) -> None:
 
 def test_judge_score_total_is_weighted() -> None:
     perfect = JudgeScore(
-        character_fidelity=10, prompt_fidelity=10,
-        aesthetic_match=10, quality=10, justification="great",
+        character_fidelity=10,
+        prompt_fidelity=10,
+        aesthetic_match=10,
+        quality=10,
+        justification="great",
     )
     assert perfect.total == 40.0
 
     only_quality = JudgeScore(
-        character_fidelity=0, prompt_fidelity=0,
-        aesthetic_match=0, quality=10, justification="off-brand",
+        character_fidelity=0,
+        prompt_fidelity=0,
+        aesthetic_match=0,
+        quality=10,
+        justification="off-brand",
     )
     # Quality weight is 10% × 4 = 0.4 per point; max 4.
     assert only_quality.total == 4.0
 
     only_character = JudgeScore(
-        character_fidelity=10, prompt_fidelity=0,
-        aesthetic_match=0, quality=0, justification="on brand but wrong scene",
+        character_fidelity=10,
+        prompt_fidelity=0,
+        aesthetic_match=0,
+        quality=0,
+        justification="on brand but wrong scene",
     )
     # Character weight is 40% × 4 = 1.6 per point; max 16.
     assert only_character.total == 16.0
@@ -121,8 +132,11 @@ def test_judge_score_extracts_extras() -> None:
 
 def test_estimate_cost_uses_max_per_artifact() -> None:
     ps = PromptSet(
-        name="x", modality="image", reference="r.png",
-        prompt="prompt", size="1024x1792",
+        name="x",
+        modality="image",
+        reference="r.png",
+        prompt="prompt",
+        size="1024x1792",
     )
     # Max image cost in pricing.json among these is gpt-image-1-high $0.20.
     # Plus $0.005/judge × 2 specs × 2 takes = small total.
@@ -137,17 +151,38 @@ def test_estimate_cost_uses_max_per_artifact() -> None:
 
 def test_report_sorts_by_score_then_cost() -> None:
     ps = PromptSet(
-        name="keyframe", modality="image", reference="r.png", prompt="x",
+        name="keyframe",
+        modality="image",
+        reference="r.png",
+        prompt="x",
     )
     a = BenchmarkRecord(
-        spec="gemini:imagen-4", take=1, artifact_path="x", cost_usd=0.06, latency_ms=2000,
-        score=JudgeScore(character_fidelity=8, prompt_fidelity=8,
-                         aesthetic_match=8, quality=8, justification="good"),
+        spec="gemini:imagen-4",
+        take=1,
+        artifact_path="x",
+        cost_usd=0.06,
+        latency_ms=2000,
+        score=JudgeScore(
+            character_fidelity=8,
+            prompt_fidelity=8,
+            aesthetic_match=8,
+            quality=8,
+            justification="good",
+        ),
     )
     b = BenchmarkRecord(
-        spec="openai:gpt-image-1", take=1, artifact_path="x", cost_usd=0.04, latency_ms=3000,
-        score=JudgeScore(character_fidelity=9, prompt_fidelity=9,
-                         aesthetic_match=9, quality=9, justification="better"),
+        spec="openai:gpt-image-1",
+        take=1,
+        artifact_path="x",
+        cost_usd=0.04,
+        latency_ms=3000,
+        score=JudgeScore(
+            character_fidelity=9,
+            prompt_fidelity=9,
+            aesthetic_match=9,
+            quality=9,
+            justification="better",
+        ),
     )
     report = _build_report([a, b], ps)
     assert report.find("openai:gpt-image-1") < report.find("gemini:imagen-4"), (
@@ -159,11 +194,55 @@ def test_report_sorts_by_score_then_cost() -> None:
 def test_report_handles_errors() -> None:
     ps = PromptSet(name="x", modality="image", reference="r.png", prompt="x")
     rec = BenchmarkRecord(
-        spec="gemini:imagen-4", take=1, artifact_path="missing.png",
-        cost_usd=0.0, latency_ms=0,
+        spec="gemini:imagen-4",
+        take=1,
+        artifact_path="missing.png",
+        cost_usd=0.0,
+        latency_ms=0,
         error="ProviderRateLimited: 429",
     )
     report = _build_report([rec], ps)
     assert "errors" in report
     # Errored runs still appear with score 0.0.
     assert "0.0 / 40" in report
+
+
+def test_run_benchmark_wraps_provider_errors_as_click_exceptions(monkeypatch) -> None:
+    ps = PromptSet(name="x", modality="image", reference="r.png", prompt="x")
+    monkeypatch.setattr(
+        "solypsizm_moment_studio.commands.benchmark.load_prompt_set",
+        lambda _name, search_dir=None: ps,
+    )
+    monkeypatch.setattr(
+        "solypsizm_moment_studio.commands.benchmark.run",
+        lambda **_kwargs: (_ for _ in ()).throw(ProviderError("budget exceeded")),
+    )
+
+    with pytest.raises(click.ClickException, match="budget exceeded"):
+        run_benchmark("x", ("openai:gpt-image-1",), 1, "gemini-2.5-flash", 0.001)
+
+
+def test_run_benchmark_dry_run_estimates_without_calling_runner(monkeypatch, capsys) -> None:
+    ps = PromptSet(name="x", modality="image", reference="r.png", prompt="x")
+    monkeypatch.setattr(
+        "solypsizm_moment_studio.commands.benchmark.load_prompt_set",
+        lambda _name, search_dir=None: ps,
+    )
+    monkeypatch.setattr(
+        "solypsizm_moment_studio.commands.benchmark.run",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("runner called")),
+    )
+
+    run_benchmark(
+        "x",
+        ("openai:gpt-image-1",),
+        2,
+        "gemini-2.5-flash",
+        budget=None,
+        dry_run=True,
+    )
+
+    out = capsys.readouterr().out
+    assert "DRY RUN" in out
+    assert "Estimated cost" in out
+    assert "openai:gpt-image-1" in out

@@ -7,21 +7,16 @@ get tested when there's recorded fixture coverage.
 
 from __future__ import annotations
 
-import json
 import os
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from solypsizm_moment_studio.providers import cache, cost, pricing, registry, secrets
+from solypsizm_moment_studio.providers import cache, cost, pricing, registry
 from solypsizm_moment_studio.providers.exceptions import (
     BudgetExceeded,
-    ProviderError,
-    ProviderUnavailable,
 )
 from solypsizm_moment_studio.providers.results import CompletionResult
-
 
 # ---------------------------------------------------------------------------
 # pricing
@@ -87,12 +82,19 @@ def test_budget_remaining(tmp_path, monkeypatch) -> None:
 
 
 def test_cache_text_round_trip(tmp_path) -> None:
-    payload = {"text": "hello", "cost_usd": 0.01, "latency_ms": 100,
-               "provider": "p", "model_id": "m", "raw_response": {}}
+    payload = {
+        "text": "hello",
+        "cost_usd": 0.01,
+        "latency_ms": 100,
+        "provider": "p",
+        "model_id": "m",
+        "raw_response": {},
+    }
     miss = cache.lookup_text(tmp_path, provider="p", model="m", prompt="q", params={"t": 0.5})
     assert miss is None
-    cache.store_text(tmp_path, provider="p", model="m", prompt="q",
-                     result=payload, params={"t": 0.5})
+    cache.store_text(
+        tmp_path, provider="p", model="m", prompt="q", result=payload, params={"t": 0.5}
+    )
     hit = cache.lookup_text(tmp_path, provider="p", model="m", prompt="q", params={"t": 0.5})
     assert hit is not None
     assert hit["text"] == "hello"
@@ -100,11 +102,21 @@ def test_cache_text_round_trip(tmp_path) -> None:
 
 def test_cache_text_distinguishes_params(tmp_path) -> None:
     """Same prompt, different params → different cache keys."""
-    payload = {"text": "v1", "cost_usd": 0.01, "latency_ms": 100,
-               "provider": "p", "model_id": "m", "raw_response": {}}
-    cache.store_text(tmp_path, provider="p", model="m", prompt="q", result=payload, params={"t": 0.1})
+    payload = {
+        "text": "v1",
+        "cost_usd": 0.01,
+        "latency_ms": 100,
+        "provider": "p",
+        "model_id": "m",
+        "raw_response": {},
+    }
+    cache.store_text(
+        tmp_path, provider="p", model="m", prompt="q", result=payload, params={"t": 0.1}
+    )
     payload2 = dict(payload, text="v2")
-    cache.store_text(tmp_path, provider="p", model="m", prompt="q", result=payload2, params={"t": 0.9})
+    cache.store_text(
+        tmp_path, provider="p", model="m", prompt="q", result=payload2, params={"t": 0.9}
+    )
     a = cache.lookup_text(tmp_path, provider="p", model="m", prompt="q", params={"t": 0.1})
     b = cache.lookup_text(tmp_path, provider="p", model="m", prompt="q", params={"t": 0.9})
     assert a["text"] == "v1" and b["text"] == "v2"
@@ -116,13 +128,20 @@ def test_cache_artifact_round_trip(tmp_path) -> None:
     metadata = {"latency_ms": 1234, "raw_response": {"size": "1024x1792"}}
     out = cache.store_artifact(
         tmp_path,
-        provider="p", model="m", kind="image", prompt="cat",
+        provider="p",
+        model="m",
+        kind="image",
+        prompt="cat",
         artifact_source=src,
         metadata=metadata,
     )
     assert out.is_file()
     hit = cache.lookup_artifact(
-        tmp_path, provider="p", model="m", kind="image", prompt="cat",
+        tmp_path,
+        provider="p",
+        model="m",
+        kind="image",
+        prompt="cat",
     )
     assert hit is not None
     cached_path, meta = hit
@@ -137,6 +156,7 @@ def test_cache_prune_removes_old(tmp_path) -> None:
     old.write_text("{}")
     # Backdate to 60 days ago.
     import time
+
     sixty_days_ago = time.time() - 60 * 86400
     os.utime(old, (sixty_days_ago, sixty_days_ago))
     new = folder / "new.json"
@@ -158,6 +178,7 @@ def test_secrets_status_reports_env_when_set(monkeypatch, tmp_path) -> None:
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     # Force re-resolve of CREDENTIALS_PATH which is module-level.
     from solypsizm_moment_studio.providers import secrets as s2
+
     monkeypatch.setattr(s2, "CREDENTIALS_PATH", tmp_path / ".solypsizm" / "credentials.json")
     status = s2.status()
     assert status["gemini"] == "env"
@@ -167,6 +188,7 @@ def test_secrets_status_reports_env_when_set(monkeypatch, tmp_path) -> None:
 def test_secrets_set_and_get(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
     from solypsizm_moment_studio.providers import secrets as s2
+
     monkeypatch.setattr(s2, "CREDENTIALS_PATH", tmp_path / ".solypsizm" / "credentials.json")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
@@ -203,13 +225,18 @@ def test_dispatch_call_text_cache_hit_skips_adapter(tmp_path, monkeypatch) -> No
         model="gemini-2.5-flash",
         prompt="sys-text\n\nuser-text",
         result={
-            "text": "from-cache", "cost_usd": 0.01, "latency_ms": 50,
-            "provider": "gemini", "model_id": "gemini-2.5-flash", "raw_response": {},
+            "text": "from-cache",
+            "cost_usd": 0.01,
+            "latency_ms": 50,
+            "provider": "gemini",
+            "model_id": "gemini-2.5-flash",
+            "raw_response": {},
         },
         params={"temperature": 0.7, "max_tokens": None},
     )
 
     from solypsizm_moment_studio.providers import dispatch
+
     with patch("solypsizm_moment_studio.providers.registry.resolve_text") as resolve:
         result = dispatch.call_text(
             tmp_path,
@@ -228,18 +255,25 @@ def test_dispatch_call_text_records_cost_on_miss(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("SOLYPSIZM_HOME", str(tmp_path))
 
     fake_result = CompletionResult(
-        text="generated", cost_usd=0.012, latency_ms=300,
-        provider="gemini", model_id="gemini-2.5-flash",
+        text="generated",
+        cost_usd=0.012,
+        latency_ms=300,
+        provider="gemini",
+        model_id="gemini-2.5-flash",
     )
 
     class FakeAdapter:
         provider = "gemini"
         model_id = "gemini-2.5-flash"
+
         def complete(self, **kwargs):
             return fake_result
 
     from solypsizm_moment_studio.providers import dispatch
-    with patch("solypsizm_moment_studio.providers.registry.resolve_text", return_value=FakeAdapter()):
+
+    with patch(
+        "solypsizm_moment_studio.providers.registry.resolve_text", return_value=FakeAdapter()
+    ):
         result = dispatch.call_text(
             tmp_path,
             "gemini:gemini-2.5-flash",

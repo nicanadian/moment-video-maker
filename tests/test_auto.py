@@ -7,8 +7,6 @@ in test_providers.py and validated by the live `solypsizm auto` run.
 
 from __future__ import annotations
 
-import pytest
-
 from solypsizm_moment_studio.auto import (
     AutoConfig,
     AutoState,
@@ -97,3 +95,42 @@ def test_config_extra_fields_allowed() -> None:
         }
     )
     assert cfg.text_model == "openrouter:openai/gpt-5"
+
+
+def test_auto_command_dry_run_prints_plan_without_saving_state(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "project.json").write_text(
+        '{"song_title":"Haze","song_slug":"haze","artist":"Solypsizm",'
+        '"release_date":"2026-01-09","created_at":"x","updated_at":"x"}\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "solypsizm_moment_studio.commands.auto.require_project_root",
+        lambda: root,
+    )
+    monkeypatch.setattr(
+        "solypsizm_moment_studio.commands.auto.run_auto",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("runner called")),
+    )
+
+    from solypsizm_moment_studio.commands.auto import run_auto_cmd
+
+    run_auto_cmd(
+        moments=3,
+        review_gates="none",
+        threshold=30.0,
+        budget=1.0,
+        text_model="fake:text",
+        image_model="fake:image",
+        video_model="fake:video",
+        reset=False,
+        dry_run=True,
+    )
+
+    out = capsys.readouterr().out
+    assert "DRY RUN" in out
+    assert "fake:text" in out
+    assert not (root / ".state" / "auto-state.json").exists()

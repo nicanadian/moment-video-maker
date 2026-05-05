@@ -172,7 +172,7 @@ def _compute_section_energy(
     rms = librosa.feature.rms(y=y)[0]
     rms_times = librosa.times_like(rms, sr=sr)
     out: list[tuple[float, float, float, float]] = []
-    for start, end in zip(boundaries[:-1], boundaries[1:]):
+    for start, end in zip(boundaries[:-1], boundaries[1:], strict=False):
         mask = (rms_times >= start) & (rms_times < end)
         if not np.any(mask):
             avg = peak = 0.0
